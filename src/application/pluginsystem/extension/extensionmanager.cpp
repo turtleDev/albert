@@ -86,20 +86,16 @@ void ExtensionManager::startQuery(const QString &searchTerm) {
 
 
 /** ***************************************************************************/
-void ExtensionManager::setupSession() {
-    _sessionIsActive = true;
-    for (IExtension *e : _extensions)
- 		e->setupSession();
-}
-
-
-
-/** ***************************************************************************/
-void ExtensionManager::teardownSession() {
-    for (IExtension *e : _extensions)
-        e->teardownSession();
-    emit newModel(nullptr);
-    _sessionIsActive = false;
+void ExtensionManager::setSessionActive(bool active) {
+    _sessionIsActive = active;
+    if (active){
+        for (IExtension *e : _extensions)
+            e->setupSession();
+    } else {
+        for (IExtension *e : _extensions)
+            e->teardownSession();
+        emit newModel(nullptr);
+    }
 }
 
 
@@ -131,7 +127,7 @@ void ExtensionManager::unregisterExtension(QObject *o) {
 
 
 /** ***************************************************************************/
-void ExtensionManager::activate(const QModelIndex &index) {
+void ExtensionManager::activateIndex(int index) {
     _currentQuery->impl->activate(index);
 }
 

@@ -46,7 +46,7 @@ QIcon ChromeBookmarks::Bookmark::icon() const {
 
 /** ***************************************************************************/
 void ChromeBookmarks::Bookmark::activate() {
-    qApp->hideWidget();
+    qApp->hideMainWindow();
     QDesktopServices::openUrl(QUrl(url_));
     ++usage_;
 }

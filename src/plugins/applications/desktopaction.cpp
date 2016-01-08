@@ -51,7 +51,7 @@ QIcon Applications::DesktopAction::icon() const {
 
 /** ***************************************************************************/
 void Applications::DesktopAction::activate() {
-    qApp->hideWidget();
+    qApp->hideMainWindow();
     if(term_)
         QProcess::startDetached(Application::terminal.arg(exec_));
     else

@@ -52,7 +52,7 @@ QIcon Websearch::SearchEngine::icon() const {
 
 /** ***************************************************************************/
 void Websearch::SearchEngine::activate() {
-    qApp->hideWidget();
+    qApp->hideMainWindow();
     QDesktopServices::openUrl(QUrl(QString(url_).replace("%s", searchTerm_)));
 }
 

@@ -142,7 +142,7 @@ void System::Extension::handleQuery(shared_ptr<Query> query) {
                                                            it->desc,
                                                            it->icon,
                                                            [=](){
-                qApp->hideWidget();
+                qApp->hideMainWindow();
                 QProcess::startDetached(it->cmd);
             }));
 }

@@ -4,6 +4,8 @@
         <file alias="plugin_notloaded">resources/icons/plugin_notloaded.png</file>
         <file alias="plugin_loaded">resources/icons/plugin_ok.png</file>
         <file alias="app_icon">resources/icons/albert.svg</file>
-        <file alias="gear">resources/icons/gear.svg</file>
+        <file>resources/icons/gear.svg</file>
+        <file>resources/ui/HistoryTextInput.qml</file>
+        <file>resources/ui/MainComponent.qml</file>
     </qresource>
 </RCC>

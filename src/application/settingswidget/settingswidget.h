@@ -26,7 +26,7 @@ class SettingsWidget final : public QWidget
     Q_OBJECT
 
 public:
-    SettingsWidget(MainWidget *mainWidget, HotkeyManager *hotkeyManager, PluginManager *pluginManager, QWidget * parent = 0, Qt::WindowFlags f = 0);
+    SettingsWidget(/*MainWidget *mainWidget, */HotkeyManager *hotkeyManager, PluginManager *pluginManager, QWidget * parent = 0, Qt::WindowFlags f = 0);
 
 private:
     void keyPressEvent(QKeyEvent * event) override;
@@ -36,7 +36,7 @@ private:
     void changeHotkey(int);
     void updatePluginInformations(const QModelIndex & curr);
 
-    MainWidget *_mainWidget;
+//    MainWidget *_mainWidget;
     HotkeyManager *_hotkeyManager;
     PluginManager *_pluginManager;
     Ui::SettingsDialog ui;

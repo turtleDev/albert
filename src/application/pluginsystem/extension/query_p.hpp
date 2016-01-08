@@ -47,7 +47,7 @@ struct Match {
 };
 
 /** ***************************************************************************/
-class QueryPrivate final : public QAbstractItemModel
+class QueryPrivate : public QAbstractItemModel
 {
     Q_OBJECT
     friend class ExtensionManager;
@@ -127,9 +127,9 @@ public:
 
 
     /** ***********************************************************************/
-    void activate(const QModelIndex & index) {
-        if (index.isValid())
-            static_cast<TreeItem*>(index.internalPointer())->data->activate();
+    void activate(int index) {
+        if (0 <= index && index < static_cast<int>(matches_.size()))
+            matches_[index].item.data->activate();
     }
 
 

@@ -62,7 +62,7 @@ void Calculator::Extension::handleQuery(shared_ptr<Query> query) {
     calcItem->setIcon(calcIcon_);
     calcItem->setAction([result](){
         QApplication::clipboard()->setText(result);
-        qApp->hideWidget();
+        qApp->hideMainWindow();
     });
     query->addMatch(calcItem, SHRT_MAX);
 }

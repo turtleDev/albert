@@ -54,7 +54,7 @@ public:
     }
 
     void activate() override {
-        qApp->hideWidget();
+        qApp->hideMainWindow();
         QDesktopServices::openUrl(QUrl::fromLocalFile(_file->path()));
         _file->incUsage();
     }
@@ -77,7 +77,7 @@ public:
     }
 
     void activate() override {
-        qApp->hideWidget();
+        qApp->hideMainWindow();
         QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(_file->path()).path()));
         _file->incUsage();
     }
@@ -100,7 +100,7 @@ public:
     }
 
     void activate() override {
-        qApp->hideWidget();
+        qApp->hideMainWindow();
 
         //  Get clipboard
         QClipboard *cb = QApplication::clipboard();
@@ -147,7 +147,7 @@ public:
     }
 
     void activate() override {
-        qApp->hideWidget();
+        qApp->hideMainWindow();
         QApplication::clipboard()->setText(_file->path());
         _file->incUsage();
     }

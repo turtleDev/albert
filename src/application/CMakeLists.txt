@@ -1,4 +1,5 @@
 find_package(Qt5Widgets 5.1 REQUIRED)
+find_package(Qt5Quick 5.1 REQUIRED)
 
 include_directories(
     hotkey/
@@ -12,13 +13,10 @@ include_directories(
 set(SRC
     main.cpp
     albertapp.cpp
+    mainwindow.cpp
+    history.hpp
     hotkey/hotkeymanager.cpp
     hotkey/hotkeymanager_p.h
-    mainwidget/inputline.cpp
-    mainwidget/itemdelegate.cpp
-    mainwidget/mainwidget.cpp
-    mainwidget/proposallist.cpp
-    mainwidget/settingsbutton.h
     pluginsystem/pluginloader.cpp
     pluginsystem/pluginmanager.cpp
     pluginsystem/extension/extensionmanager.cpp
@@ -34,10 +32,10 @@ set(SRC
 
 set(LIB
     ${Qt5Widgets_LIBRARIES}
+    ${Qt5Quick_LIBRARIES}
 )
 
 qt5_wrap_ui(UI
-    mainwidget/mainwidget.ui
     settingswidget/settingswidget.ui
 )
 

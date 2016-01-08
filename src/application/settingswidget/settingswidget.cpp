@@ -24,15 +24,14 @@
 #include <QFocusEvent>
 #include "settingswidget.h"
 #include "hotkeymanager.h"
-#include "mainwidget.h"
 #include "pluginmanager.h"
 #include "pluginmodel.h"
 #include "iextension.h"
 
 
 /** ***************************************************************************/
-SettingsWidget::SettingsWidget(MainWidget *mainWidget, HotkeyManager *hotkeyManager, PluginManager *pluginManager, QWidget *parent, Qt::WindowFlags f)
-    : QWidget(parent, f), _mainWidget(mainWidget), _hotkeyManager(hotkeyManager), _pluginManager(pluginManager) {
+SettingsWidget::SettingsWidget(/*MainWidget *mainWidget, */HotkeyManager *hotkeyManager, PluginManager *pluginManager, QWidget *parent, Qt::WindowFlags f)
+    : QWidget(parent, f), /*_mainWidget(mainWidget),*/ _hotkeyManager(hotkeyManager), _pluginManager(pluginManager) {
 
     ui.setupUi(this);
     setWindowFlags(Qt::Window|Qt::WindowCloseButtonHint);
@@ -53,43 +52,43 @@ SettingsWidget::SettingsWidget(MainWidget *mainWidget, HotkeyManager *hotkeyMana
             this, &SettingsWidget::changeHotkey);
 
 
-    // ALWAYS CENTER
-    ui.checkBox_center->setChecked(mainWidget->showCenterd());
-    connect(ui.checkBox_center, &QCheckBox::toggled, mainWidget,
-            &MainWidget::setShowCentered);
+//    // ALWAYS CENTER
+//    ui.checkBox_center->setChecked(mainWidget->showCenterd());
+//    connect(ui.checkBox_center, &QCheckBox::toggled, mainWidget,
+//            &MainWidget::setShowCentered);
 
-    // MAX PROPOSALS
-    ui.spinBox_proposals->setValue(mainWidget->ui.proposalList->maxItems());
-    connect(ui.spinBox_proposals, (void (QSpinBox::*)(int))&QSpinBox::valueChanged,
-            mainWidget->ui.proposalList, &ProposalList::setMaxItems);
+//    // MAX PROPOSALS
+//    ui.spinBox_proposals->setValue(mainWidget->ui.proposalList->maxItems());
+//    connect(ui.spinBox_proposals, (void (QSpinBox::*)(int))&QSpinBox::valueChanged,
+//            mainWidget->ui.proposalList, &ProposalList::setMaxItems);
 
-    // INFO BELOW ITEM
-    ui.checkBox_showInfo->setChecked(mainWidget->ui.proposalList->showInfo());
-    connect(ui.checkBox_showInfo, &QCheckBox::toggled,
-            mainWidget->ui.proposalList, &ProposalList::setShowInfo);
+//    // INFO BELOW ITEM
+//    ui.checkBox_showInfo->setChecked(mainWidget->ui.proposalList->showInfo());
+//    connect(ui.checkBox_showInfo, &QCheckBox::toggled,
+//            mainWidget->ui.proposalList, &ProposalList::setShowInfo);
 
-    // INFO FOR UNSELECTED
-    ui.checkBox_selectedOnly->setChecked(mainWidget->ui.proposalList->selectedOnly());
-    connect(ui.checkBox_selectedOnly, &QCheckBox::toggled,
-            mainWidget->ui.proposalList, &ProposalList::setSelectedOnly);
+//    // INFO FOR UNSELECTED
+//    ui.checkBox_selectedOnly->setChecked(mainWidget->ui.proposalList->selectedOnly());
+//    connect(ui.checkBox_selectedOnly, &QCheckBox::toggled,
+//            mainWidget->ui.proposalList, &ProposalList::setSelectedOnly);
 
 
-    // THEMES
-    QFileInfoList themes;
-    int i = 0 ;
-    QStringList themeDirs =
-            QStandardPaths::locateAll(QStandardPaths::DataLocation, "themes",
-                                      QStandardPaths::LocateDirectory);
-    for (QDir d : themeDirs)
-        themes << d.entryInfoList(QStringList("*.qss"), QDir::Files | QDir::NoSymLinks);
-    for (QFileInfo fi : themes) {
-        ui.comboBox_themes->addItem(fi.baseName(), fi.canonicalFilePath());
-        if ( fi.baseName() == mainWidget->theme())
-            ui.comboBox_themes->setCurrentIndex(i);
-        ++i;
-    }
-    connect(ui.comboBox_themes, (void (QComboBox::*)(int))&QComboBox::currentIndexChanged,
-            this, &SettingsWidget::onThemeChanged);
+//    // THEMES
+//    QFileInfoList themes;
+//    int i = 0 ;
+//    QStringList themeDirs =
+//            QStandardPaths::locateAll(QStandardPaths::DataLocation, "themes",
+//                                      QStandardPaths::LocateDirectory);
+//    for (QDir d : themeDirs)
+//        themes << d.entryInfoList(QStringList("*.qss"), QDir::Files | QDir::NoSymLinks);
+//    for (QFileInfo fi : themes) {
+//        ui.comboBox_themes->addItem(fi.baseName(), fi.canonicalFilePath());
+//        if ( fi.baseName() == mainWidget->theme())
+//            ui.comboBox_themes->setCurrentIndex(i);
+//        ++i;
+//    }
+//    connect(ui.comboBox_themes, (void (QComboBox::*)(int))&QComboBox::currentIndexChanged,
+//            this, &SettingsWidget::onThemeChanged);
 
 
     /*
@@ -157,15 +156,15 @@ void SettingsWidget::changeHotkey(int newhk) {
 
 /** ***************************************************************************/
 void SettingsWidget::onThemeChanged(int i) {
-    // Apply and save the theme
-    QString currentTheme = _mainWidget->theme();
-    if (!_mainWidget->setTheme(ui.comboBox_themes->itemText(i))) {
-        QMessageBox msgBox(QMessageBox::Critical, "Error", "Could not apply theme.");
-        msgBox.exec();
-        if (!_mainWidget->setTheme(currentTheme)) {
-           qFatal("Rolling back theme failed.");
-        }
-    }
+//    // Apply and save the theme
+//    QString currentTheme = _mainWidget->theme();
+//    if (!_mainWidget->setTheme(ui.comboBox_themes->itemText(i))) {
+//        QMessageBox msgBox(QMessageBox::Critical, "Error", "Could not apply theme.");
+//        msgBox.exec();
+//        if (!_mainWidget->setTheme(currentTheme)) {
+//           qFatal("Rolling back theme failed.");
+//        }
+//    }
 }
 
 

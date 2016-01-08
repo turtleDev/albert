@@ -16,7 +16,31 @@
 
 #include "albertapp.h"
 
+void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &message) {
+    QString suffix;
+    if (context.function)
+        suffix = QString("  --  [%1]").arg(context.function);
+    switch (type) {
+#if __cplusplus >= 201103L
+    case QtInfoMsg:
+#endif
+    case QtDebugMsg:
+        fprintf(stderr, "%s\n", message.toLocal8Bit().constData());
+        break;
+    case QtWarningMsg:
+        fprintf(stderr, "\x1b[33;1mWarning:\x1b[0;1m %s%s\x1b[0m\n", message.toLocal8Bit().constData(), suffix.toLocal8Bit().constData());
+        break;
+    case QtCriticalMsg:
+        fprintf(stderr, "\x1b[31;1mCritical:\x1b[0;1m %s%s\x1b[0m\n", message.toLocal8Bit().constData(), suffix.toLocal8Bit().constData());
+        break;
+    case QtFatalMsg:
+        fprintf(stderr, "\x1b[41;30;4mFATAL:\x1b[0;1m %s%s\x1b[0m\n", message.toLocal8Bit().constData(), suffix.toLocal8Bit().constData());
+        abort();
+    }
+}
+
 int main(int argc, char *argv[]) {
+    qInstallMessageHandler(myMessageOutput);
     AlbertApp app(argc, argv);
     return app.exec();
 }

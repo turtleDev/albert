@@ -31,16 +31,15 @@ class ExtensionManager final : public QObject
 public:
     ExtensionManager();
 
-    void startQuery(const QString &searchTerm);
-    void setupSession();
-    void teardownSession();
-
     void registerExtension(QObject *);
     void unregisterExtension(QObject *);
 
-    void activate(const QModelIndex & index);
-
+    void setSessionActive(bool);
     bool sessionIsActive() const;
+
+public slots:
+    void startQuery(const QString &searchTerm);
+    void activateIndex(int index);
 
 private:
     QSet<IExtension*> _extensions;

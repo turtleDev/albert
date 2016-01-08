@@ -53,7 +53,7 @@ QIcon Applications::Application::icon() const {
 /** ***************************************************************************/
 void Applications::Application::activate() {
     // Standard action
-    qApp->hideWidget();
+    qApp->hideMainWindow();
     // Finally since the exec key expects to be interpreted and escapes and
     // expanded and whatelse a shell does with a commandline it is the easiest
     // way to just let the shell do it (therminal has a subshell)

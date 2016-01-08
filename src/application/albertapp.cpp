@@ -20,109 +20,75 @@
 #include <QDebug>
 #include <csignal>
 #include "albertapp.h"
-#include "mainwidget.h"
+#include "mainwindow.h"
 #include "settingswidget.h"
 #include "hotkeymanager.h"
 #include "pluginmanager.h"
 #include "extensionmanager.h"
 
-
-/** ***************************************************************************/
-void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &message) {
-    QString suffix;
-    if (context.function)
-        suffix = QString("  --  [%1]").arg(context.function);
-    switch (type) {
-#if __cplusplus >= 201103L
-    case QtInfoMsg:
-#endif
-    case QtDebugMsg:
-        fprintf(stderr, "%s\n", message.toLocal8Bit().constData());
-        break;
-    case QtWarningMsg:
-        fprintf(stderr, "\x1b[33;1mWarning:\x1b[0;1m %s%s\x1b[0m\n", message.toLocal8Bit().constData(), suffix.toLocal8Bit().constData());
-        break;
-    case QtCriticalMsg:
-        fprintf(stderr, "\x1b[31;1mCritical:\x1b[0;1m %s%s\x1b[0m\n", message.toLocal8Bit().constData(), suffix.toLocal8Bit().constData());
-        break;
-    case QtFatalMsg:
-        fprintf(stderr, "\x1b[41;30;4mFATAL:\x1b[0;1m %s%s\x1b[0m\n", message.toLocal8Bit().constData(), suffix.toLocal8Bit().constData());
-        abort();
-    }
-}
-
-
 /** ***************************************************************************/
 AlbertApp::AlbertApp(int &argc, char *argv[]) : QApplication(argc, argv) {
+
+    // MAKE SURE THE NEEDED DIRECTORIES EXIST
+    QDir dataDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+    if (!dataDir.exists())
+        dataDir.mkpath(".");
+
+    QDir configDir(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation));
+    if (!configDir.exists())
+        configDir.mkpath(".");
+
     /*
      *  INITIALIZE APPLICATION
      */
 
-    qInstallMessageHandler(myMessageOutput);
-    setOrganizationDomain("manuelschneid3r");
-    setApplicationName("albert");
-    setApplicationDisplayName("Albert");
-    setApplicationVersion("v0.8.0");
-    setWindowIcon(QIcon(":app_icon"));
-    setQuitOnLastWindowClosed(false); // Dont quit after settings close
-
+    this->setOrganizationDomain("albert");
+    this->setApplicationName("albert");
+    this->setApplicationDisplayName("Albert");
+    this->setApplicationVersion("v0.9.0");
+    this->setWindowIcon(QIcon(":app_icon"));
 
     /*
-     * INITIALISATION
+     * INITIALIZE WINDOW
      */
 
-    // MAKE SURE THE NEEDED DIRECTORIES EXIST
-    QDir data(QStandardPaths::writableLocation(QStandardPaths::DataLocation));
-    if (!data.exists())
-        data.mkpath(".");
+    mainWindow_ = new MainWindow;
+    hotkeyManager_ = new HotkeyManager;
+    pluginManager_ = new PluginManager;
+    extensionManager_ = new ExtensionManager;
 
-    _mainWidget = new MainWidget;
-    _hotkeyManager = new HotkeyManager;
-    _pluginManager = new PluginManager;
-    _extensionManager = new ExtensionManager;
 
+    // TODO das muss ohne gehen. Loader muss laszyload können
     // Propagade the extensions once
-    for (const unique_ptr<PluginSpec> &p : _pluginManager->plugins())
+    for (const unique_ptr<PluginSpec> &p : pluginManager_->plugins())
         if (p->isLoaded())
-            _extensionManager->registerExtension(p->instance());
-
-    // Quit gracefully on SIGTERM
-    signal(SIGTERM, [](int){
-        QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
-    });
-
+            extensionManager_->registerExtension(p->instance());
 
     /*
      *  SETUP SIGNAL FLOW
      */
+    // Publish loaded plugins to the specific interface handlers
+    QObject::connect(pluginManager_, &PluginManager::pluginLoaded, extensionManager_, &ExtensionManager::registerExtension);
+    QObject::connect(pluginManager_, &PluginManager::pluginAboutToBeUnloaded, extensionManager_, &ExtensionManager::unregisterExtension);
 
-    // Show mainwidget if hotkey is pressed
-    QObject::connect(_hotkeyManager, &HotkeyManager::hotKeyPressed,_mainWidget, &MainWidget::toggleVisibility);
-
-    // Extrension manager signals new proposals
-    QObject::connect(_extensionManager, &ExtensionManager::newModel, _mainWidget, &MainWidget::setModel);
+    // Show mainWindow if hotkey is pressed
+    QObject::connect(hotkeyManager_, &HotkeyManager::hotKeyPressed, mainWindow_, &MainWindow::toggleVisibility);
 
     // Setup and teardown query sessions with the state of the widget
-    QObject::connect(_mainWidget, &MainWidget::widgetShown,  _extensionManager, &ExtensionManager::setupSession);
-    QObject::connect(_mainWidget, &MainWidget::widgetHidden, _extensionManager, &ExtensionManager::teardownSession);
-    // Click on _settingsButton (or shortcut) closes albert + opens settings dialog
-    QObject::connect(_mainWidget->ui.inputLine->_settingsButton, &QPushButton::clicked, _mainWidget, &MainWidget::hide);
-    QObject::connect(_mainWidget->ui.inputLine->_settingsButton, &QPushButton::clicked, this, &AlbertApp::openSettings);
+    QObject::connect(mainWindow_, &MainWindow::visibleChanged, extensionManager_, &ExtensionManager::setSessionActive);
     // A change in text triggers requests
-    QObject::connect(_mainWidget->ui.inputLine, &InputLine::textChanged, _extensionManager, &ExtensionManager::startQuery);
-    // Enter triggers action
-    QObject::connect(_mainWidget->ui.proposalList, &ProposalList::activated, _extensionManager, &ExtensionManager::activate);
+    QObject::connect(mainWindow_, &MainWindow::queryChanged, extensionManager_, &ExtensionManager::startQuery);
+    // Activation forwarding
+    QObject::connect(mainWindow_, &MainWindow::indexActivated, extensionManager_, &ExtensionManager::activateIndex);
+    // Click on _settingsButton (or shortcut) closes albert + opens settings dialog
+    QObject::connect(mainWindow_, &MainWindow::settingsWindowRequested, this, &AlbertApp::openSettingsWindow);
+    QObject::connect(mainWindow_, &MainWindow::settingsWindowRequested, mainWindow_, &MainWindow::hide);
 
-    // Publish loaded plugins to the specific interface handlers
-    QObject::connect(_pluginManager, &PluginManager::pluginLoaded, _extensionManager, &ExtensionManager::registerExtension);
-    QObject::connect(_pluginManager, &PluginManager::pluginAboutToBeUnloaded, _extensionManager, &ExtensionManager::unregisterExtension);
+    // Extrension manager signals new proposals
+    QObject::connect(extensionManager_, &ExtensionManager::newModel, mainWindow_, &MainWindow::setModel);
 
-    // Hide on focus loss
-//    QObject::connect(this, &QApplication::applicationStateChanged, this, &AlbertApp::onStateChange);
-
-
-    // TESTING AREA
-
+    // Quit gracefully on SIGTERM
+    signal(SIGTERM, [](int){ QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection); });
 }
 
 
@@ -130,10 +96,10 @@ AlbertApp::AlbertApp(int &argc, char *argv[]) : QApplication(argc, argv) {
 /** ***************************************************************************/
 AlbertApp::~AlbertApp() {
     // Unload the plugins
-    delete _extensionManager;
-    delete _pluginManager;
-    delete _hotkeyManager;
-    delete _mainWidget;
+    delete extensionManager_;
+    delete pluginManager_;
+    delete hotkeyManager_;
+    delete mainWindow_;
 }
 
 
@@ -144,7 +110,7 @@ int AlbertApp::exec() {
     QSettings s;
     QVariant v;
     if (!(s.contains("hotkey") && (v=s.value("hotkey")).canConvert(QMetaType::QString)
-            && _hotkeyManager->registerHotkey(v.toString()))){
+            && hotkeyManager_->registerHotkey(v.toString()))){
         QMessageBox msgBox(QMessageBox::Critical, "Error",
                            "Hotkey is not set or invalid. Press ok to open "
                            "the settings or press close to quit albert.",
@@ -152,7 +118,7 @@ int AlbertApp::exec() {
         msgBox.exec();
         if ( msgBox.result() == QMessageBox::Ok ) {
             //hotkeyManager->disable();
-            openSettings();
+            openSettingsWindow();
             //QObject::connect(settingsWidget, &QWidget::destroyed, hotkeyManager, &HotkeyManager::enable);
         }
         else
@@ -164,31 +130,30 @@ int AlbertApp::exec() {
 
 
 /** ***************************************************************************/
-void AlbertApp::openSettings() {
-    if (!_settingsWidget)
-        _settingsWidget = new SettingsWidget(_mainWidget, _hotkeyManager, _pluginManager);
-    _settingsWidget->show();
-    _settingsWidget->raise();
+QSettings AlbertApp::gSettings() {
+    qFatal("gSettings: Not implemented");
 }
 
 
 
 /** ***************************************************************************/
-void AlbertApp::showWidget() {
-    _mainWidget->show();
+void AlbertApp::openSettingsWindow() {
+    if (!settingsWidget_)
+        settingsWidget_ = new SettingsWidget(hotkeyManager_, pluginManager_);
+    settingsWidget_->show();
+    settingsWidget_->raise();
 }
 
 
 
 /** ***************************************************************************/
-void AlbertApp::hideWidget() {
-    _mainWidget->hide();
+void AlbertApp::showMainWindow() {
+    mainWindow_->show();
 }
 
 
 
-///** ***************************************************************************/
-//void AlbertApp::onStateChange(Qt::ApplicationState state) {
-//    if (state==Qt::ApplicationInactive)
-//        _mainWidget->hide();
-//}
+/** ***************************************************************************/
+void AlbertApp::hideMainWindow() {
+    mainWindow_->hide();
+}

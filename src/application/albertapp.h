@@ -16,8 +16,9 @@
 
 #pragma once
 #include <QApplication>
+#include <QSettings>
 #include <QPointer>
-class MainWidget;
+class MainWindow;
 class HotkeyManager;
 class PluginManager;
 class ExtensionManager;
@@ -36,20 +37,18 @@ public:
     ~AlbertApp();
 
     int exec();
+    QSettings gSettings();
 
-    // Global facade. Acessible to all subsystems
-    void openSettings();
-    void showWidget();
-    void hideWidget();
-
-private slots:
-//    void onStateChange(Qt::ApplicationState state);
+public slots:
+    void openSettingsWindow();
+    void showMainWindow();
+    void hideMainWindow();
 
 private:
-    MainWidget               *_mainWidget;
-    HotkeyManager            *_hotkeyManager;
-    PluginManager            *_pluginManager;
-    ExtensionManager         *_extensionManager;
-    QPointer<SettingsWidget> _settingsWidget;
+    MainWindow               *mainWindow_;
+    ExtensionManager         *extensionManager_;
+    HotkeyManager            *hotkeyManager_;
+    PluginManager            *pluginManager_;
+    QPointer<SettingsWidget> settingsWidget_;
 };
 
