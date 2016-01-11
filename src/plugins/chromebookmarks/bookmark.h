@@ -18,12 +18,11 @@
 #include <QString>
 #include <QIcon>
 #include "abstractobjects.hpp"
-#include "search/iindexable.h"
 
 
 namespace ChromeBookmarks {
 
-class Bookmark final : public ActionNode, public IIndexable
+class Bookmark final : public AlbertItem
 {
     friend class Extension;
     friend class Indexer;
@@ -38,9 +37,10 @@ public:
     QString subtext() const override;
     QIcon icon() const override;
     void activate() override;
+
+    uint16_t usageCount() const override {return usage_;}
     vector<QString> aliases() const override;
 
-    ushort usage() const {return usage_;}
     const QString &url() const {return url_;}
 
 private:

@@ -19,14 +19,13 @@
 #include <QIcon>
 #include <vector>
 using std::vector;
-#include "search/iindexable.h"
 #include "abstractobjects.hpp"
 
 namespace Applications{
 
 class DesktopAction;
 
-class Application final : public ActionNode, public IIndexable
+class Application final : public AlbertItem
 {
     friend class Extension;
     friend class Indexer;
@@ -40,14 +39,14 @@ public:
     QString text() const override;
     QString subtext() const override;
     QIcon icon() const override;
+    uint16_t usageCount() const override {return _usage;}
     void activate() override;
     bool hasChildren() const override;
-    vector<shared_ptr<ActionNode>> children() override;
+    vector<shared_ptr<AlbertItem>> children() override;
     vector<QString> aliases() const override;
 
     bool readDesktopEntry();
     const QString& path() const {return _path;}
-    ushort usage() const {return _usage;}
     void incUsage() {++_usage;}
 
     static QString terminal;
@@ -64,6 +63,6 @@ private:
     QString _exec;
     bool    _term;
     mutable ushort _usage;
-    vector<shared_ptr<ActionNode>> _actions;
+    vector<shared_ptr<AlbertItem>> _actions;
 };
 }

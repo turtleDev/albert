@@ -18,16 +18,15 @@
 #include <QString>
 #include <vector>
 #include <memory>
-class IIndexable;
-
+#include "abstractobjects.hpp"
 
 class SearchImpl
 {
 public:
     virtual ~SearchImpl(){}
-    virtual void add(std::shared_ptr<IIndexable> idxble) = 0;
+    virtual void add(std::shared_ptr<AlbertItem> idxble) = 0;
     virtual void clear() = 0;
-    virtual std::vector<std::shared_ptr<IIndexable>> search(const QString &req) const = 0;
+    virtual std::vector<std::shared_ptr<AlbertItem>> search(const QString &req) const = 0;
 
 protected:
     static constexpr const char* SEPARATOR_REGEX  = "[^a-zA-Z0-9]+";

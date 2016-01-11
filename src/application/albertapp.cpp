@@ -47,6 +47,7 @@ AlbertApp::AlbertApp(int &argc, char *argv[]) : QApplication(argc, argv) {
     this->setApplicationDisplayName("Albert");
     this->setApplicationVersion("v0.9.0");
     this->setWindowIcon(QIcon(":app_icon"));
+    this->setQuitOnLastWindowClosed(false); // Dont quit after settings close
 
     /*
      * INITIALIZE WINDOW

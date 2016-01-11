@@ -143,7 +143,7 @@ Applications::Extension::~Extension() {
         // Serialize
         out << static_cast<quint64>(_appIndex.size());
         for (shared_ptr<Application> &de : _appIndex)
-            out << de->path() << de->usage();
+            out << de->path() << de->usageCount();
 
         dataFile.close();
     } else
@@ -188,13 +188,13 @@ QWidget *Applications::Extension::widget(QWidget *parent) {
 void Applications::Extension::handleQuery(shared_ptr<Query> query) {
     // Search for matches. Lock memory against scanworker
     _indexAccess.lock();
-    vector<shared_ptr<IIndexable>> indexables = _searchIndex.search(query->searchTerm());
+    vector<shared_ptr<AlbertItem>> indexables = _searchIndex.search(query->searchTerm());
     _indexAccess.unlock();
 
     // Add results to query. This cast is safe since index holds files only
-    for (shared_ptr<IIndexable> obj : indexables)
-        query->addMatch(std::static_pointer_cast<Application>(obj),
-                        std::static_pointer_cast<Application>(obj)->usage());
+    for (shared_ptr<AlbertItem> obj : indexables)
+        // TODO `Search` has to determine the relevance. Set to 0 for now
+        query->addMatch(std::static_pointer_cast<Application>(obj), 0);
 }
 
 

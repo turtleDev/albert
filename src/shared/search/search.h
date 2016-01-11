@@ -18,8 +18,8 @@
 #include <QString>
 #include <vector>
 #include <memory>
+#include "abstractobjects.hpp"
 class SearchImpl;
-class IIndexable;
 
 class Search final {
 
@@ -70,7 +70,7 @@ public:
      * @brief Build the search index
      * @param The items to index
      */
-    void add(std::shared_ptr<IIndexable> idxble);
+    void add(std::shared_ptr<AlbertItem> idxble);
 
     /**
      * @brief Clear the search index
@@ -81,7 +81,7 @@ public:
      * @brief Perform a search on the index
      * @param req The query string
      */
-    std::vector<std::shared_ptr<IIndexable>> search(const QString &req) const;
+    std::vector<std::shared_ptr<AlbertItem>> search(const QString &req) const;
 
 private:
     SearchImpl *_impl;
