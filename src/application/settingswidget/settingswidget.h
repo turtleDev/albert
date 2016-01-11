@@ -37,7 +37,7 @@ private:
     void updatePluginInformations(const QModelIndex & curr);
 
 //    MainWidget *_mainWidget;
-    HotkeyManager *_hotkeyManager;
-    PluginManager *_pluginManager;
+    HotkeyManager *hotkeyManager_;
+    PluginManager *pluginManager_;
     Ui::SettingsDialog ui;
 };

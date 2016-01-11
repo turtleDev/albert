@@ -81,7 +81,7 @@ AlbertApp::AlbertApp(int &argc, char *argv[]) : QApplication(argc, argv) {
     QObject::connect(mainWindow_, &MainWindow::queryChanged, extensionManager_, &ExtensionManager::startQuery);
     // Activation forwarding
     QObject::connect(mainWindow_, &MainWindow::indexActivated, extensionManager_, &ExtensionManager::activateIndex);
-    // Click on _settingsButton (or shortcut) closes albert + opens settings dialog
+    // Click on settingsButton (or shortcut) closes albert + opens settings dialog
     QObject::connect(mainWindow_, &MainWindow::settingsWindowRequested, this, &AlbertApp::openSettingsWindow);
     QObject::connect(mainWindow_, &MainWindow::settingsWindowRequested, mainWindow_, &MainWindow::hide);
 

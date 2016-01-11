@@ -33,7 +33,7 @@
 const QString ChromeBookmarks::Extension::EXT_NAME       = "chromebookmarks";
 const QString ChromeBookmarks::Extension::CFG_BOOKMARKS  = "bookmarkfile";
 const QString ChromeBookmarks::Extension::CFG_FUZZY      = "fuzzy";
-const bool    ChromeBookmarks::Extension::CFG_FUZZY_DEF  = false;
+const bool    ChromeBookmarks::Extension::DEF_FUZZY      = false;
 
 
 /** ***************************************************************************/
@@ -43,7 +43,7 @@ ChromeBookmarks::Extension::Extension() {
     // Load settings
     QSettings s;
     s.beginGroup(EXT_NAME);
-    _searchIndex.setFuzzy(s.value(CFG_FUZZY, CFG_FUZZY_DEF).toBool());
+    searchIndex_.setFuzzy(s.value(CFG_FUZZY, DEF_FUZZY).toBool());
 
     // Deserialize data
     QFile dataFile(
@@ -60,7 +60,7 @@ ChromeBookmarks::Extension::Extension() {
             in >> size;
             for (quint64 i = 0; i < size; ++i) {
                 in >> name >> url >> usage;
-                _index.push_back(std::make_shared<Bookmark>(name, url , usage));
+                index_.push_back(std::make_shared<Bookmark>(name, url , usage));
             }
             dataFile.close();
         } else
@@ -75,7 +75,7 @@ ChromeBookmarks::Extension::Extension() {
         restorePath();
 
     // Keep in sync with the bookmarkfile
-    connect(&_watcher, &QFileSystemWatcher::fileChanged, this, &Extension::updateIndex);
+    connect(&watcher_, &QFileSystemWatcher::fileChanged, this, &Extension::updateIndex);
 
     // Get a generic favicon
     Bookmark::icon_ = QIcon::fromTheme("favorites", QIcon(":favicon"));
@@ -90,19 +90,19 @@ ChromeBookmarks::Extension::~Extension() {
     qDebug() << "[ChromeBookmarks] Finalize extension";
 
     // Stop and wait for background indexer
-    if (!_indexer.isNull()) {
-        _indexer->abort();
-        disconnect(_indexer.data(), &Indexer::destroyed, this, &Extension::updateIndex);
+    if (!indexer_.isNull()) {
+        indexer_->abort();
+        disconnect(indexer_.data(), &Indexer::destroyed, this, &Extension::updateIndex);
         QEventLoop loop;
-        connect(_indexer.data(), &Indexer::destroyed, &loop, &QEventLoop::quit);
+        connect(indexer_.data(), &Indexer::destroyed, &loop, &QEventLoop::quit);
         loop.exec();
     }
 
     // Save settings
     QSettings s;
     s.beginGroup(EXT_NAME);
-    s.setValue(CFG_FUZZY, _searchIndex.fuzzy());
-    s.setValue(CFG_BOOKMARKS, _bookmarksFile);
+    s.setValue(CFG_FUZZY, searchIndex_.fuzzy());
+    s.setValue(CFG_BOOKMARKS, bookmarksFile_);
 
     // Serialize data
     QFile dataFile(
@@ -114,11 +114,11 @@ ChromeBookmarks::Extension::~Extension() {
         QDataStream out( &dataFile );
 
         // Lock index against indexer
-        QMutexLocker locker(&_indexAccess);
+        QMutexLocker locker(&indexAccess_);
 
         // Serialize
-        out << static_cast<quint64>(_index.size());
-        for (shared_ptr<Bookmark> b : _index)
+        out << static_cast<quint64>(index_.size());
+        for (shared_ptr<Bookmark> b : index_)
             out << b->name_ << b->url_ << b->usage_;
 
         dataFile.close();
@@ -132,27 +132,27 @@ ChromeBookmarks::Extension::~Extension() {
 
 /** ***************************************************************************/
 QWidget *ChromeBookmarks::Extension::widget(QWidget *parent) {
-    if (_widget.isNull()){
-        _widget = new ConfigWidget(parent);
+    if (widget_.isNull()){
+        widget_ = new ConfigWidget(parent);
 
         // Paths
-        _widget->ui.lineEdit_path->setText(_bookmarksFile);
-        connect(_widget.data(), &ConfigWidget::requestEditPath, this, &Extension::setPath);
-        connect(this, &Extension::pathChanged, _widget->ui.lineEdit_path, &QLineEdit::setText);
+        widget_->ui.lineEdit_path->setText(bookmarksFile_);
+        connect(widget_.data(), &ConfigWidget::requestEditPath, this, &Extension::setPath);
+        connect(this, &Extension::pathChanged, widget_->ui.lineEdit_path, &QLineEdit::setText);
 
         // Fuzzy
-        _widget->ui.checkBox_fuzzy->setChecked(fuzzy());
-        connect(_widget->ui.checkBox_fuzzy, &QCheckBox::toggled, this, &Extension::setFuzzy);
+        widget_->ui.checkBox_fuzzy->setChecked(fuzzy());
+        connect(widget_->ui.checkBox_fuzzy, &QCheckBox::toggled, this, &Extension::setFuzzy);
 
         // Info
-        _widget->ui.label_info->setText(QString("%1 bookmarks indexed.").arg(_index.size()));
-        connect(this, &Extension::statusInfo, _widget->ui.label_info, &QLabel::setText);
+        widget_->ui.label_info->setText(QString("%1 bookmarks indexed.").arg(index_.size()));
+        connect(this, &Extension::statusInfo, widget_->ui.label_info, &QLabel::setText);
 
         // If indexer is active connect its statusInfo to the infoLabel
-        if (!_indexer.isNull())
-            connect(_indexer.data(), &Indexer::statusInfo, _widget->ui.label_info, &QLabel::setText);
+        if (!indexer_.isNull())
+            connect(indexer_.data(), &Indexer::statusInfo, widget_->ui.label_info, &QLabel::setText);
     }
-    return _widget;
+    return widget_;
 }
 
 
@@ -160,9 +160,9 @@ QWidget *ChromeBookmarks::Extension::widget(QWidget *parent) {
 /** ***************************************************************************/
 void ChromeBookmarks::Extension::handleQuery(shared_ptr<Query> query) {
     // Search for matches. Lock memory against indexer
-    _indexAccess.lock();
-    vector<shared_ptr<AlbertItem>> indexables = _searchIndex.search(query->searchTerm());
-    _indexAccess.unlock();
+    indexAccess_.lock();
+    vector<shared_ptr<AlbertItem>> indexables = searchIndex_.search(query->searchTerm());
+    indexAccess_.unlock();
 
     // Add results to query. This cast is safe since index holds files only
     for (shared_ptr<AlbertItem> obj : indexables)
@@ -174,7 +174,7 @@ void ChromeBookmarks::Extension::handleQuery(shared_ptr<Query> query) {
 
 /** ***************************************************************************/
 const QString &ChromeBookmarks::Extension::path() {
-    return _bookmarksFile;
+    return bookmarksFile_;
 }
 
 
@@ -182,14 +182,14 @@ const QString &ChromeBookmarks::Extension::path() {
 /** ***************************************************************************/
 void ChromeBookmarks::Extension::setPath(const QString &s) {
     QFileInfo fi(s);
-    // Only let _existing_ _files_ in
+    // Only let existing files in
     if (!(fi.exists() && fi.isFile()))
         return;
 
-    if(!_watcher.addPath(s)) // No clue why this should happen
+    if(!watcher_.addPath(s)) // No clue why this should happen
         qCritical() << s <<  "could not be watched. Changes in this path will not be noticed.";
 
-    _bookmarksFile = s;
+    bookmarksFile_ = s;
     updateIndex();
 
     // And update the widget, if it is visible atm
@@ -218,20 +218,20 @@ void ChromeBookmarks::Extension::updateIndex() {
     qDebug() << "[ChromeBookmarks] Index update triggered";
 
     // If thread is running, stop it and start this functoin after termination
-    if (!_indexer.isNull()) {
-        _indexer->abort();
-        _widget->ui.label_info->setText("Waiting for indexer to shut down ...");
-        connect(_indexer.data(), &Indexer::destroyed, this, &Extension::updateIndex);
+    if (!indexer_.isNull()) {
+        indexer_->abort();
+        widget_->ui.label_info->setText("Waiting for indexer to shut down ...");
+        connect(indexer_.data(), &Indexer::destroyed, this, &Extension::updateIndex);
     } else {
         // Create a new scanning runnable for the threadpool
-        _indexer = new Indexer(this);
+        indexer_ = new Indexer(this);
 
         //  Run it
-        QThreadPool::globalInstance()->start(_indexer);
+        QThreadPool::globalInstance()->start(indexer_);
 
         // If widget is visible show the information in the status bat
-        if (!_widget.isNull())
-            connect(_indexer.data(), &Indexer::statusInfo, _widget->ui.label_info, &QLabel::setText);
+        if (!widget_.isNull())
+            connect(indexer_.data(), &Indexer::statusInfo, widget_->ui.label_info, &QLabel::setText);
     }
 }
 
@@ -239,15 +239,15 @@ void ChromeBookmarks::Extension::updateIndex() {
 
 /** ***************************************************************************/
 bool ChromeBookmarks::Extension::fuzzy() {
-    return _searchIndex.fuzzy();
+    return searchIndex_.fuzzy();
 }
 
 
 
 /** ***************************************************************************/
 void ChromeBookmarks::Extension::setFuzzy(bool b) {
-    _indexAccess.lock();
-    _searchIndex.setFuzzy(b);
-    _indexAccess.unlock();
+    indexAccess_.lock();
+    searchIndex_.setFuzzy(b);
+    indexAccess_.unlock();
 }
 

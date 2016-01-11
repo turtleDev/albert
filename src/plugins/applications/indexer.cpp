@@ -40,11 +40,11 @@ void Applications::Indexer::run() {
     vector<shared_ptr<Application>> newIndex;
 
     // Iterate over all desktop files
-    for (const QString &path : _extension->_rootDirs) {
+    for (const QString &path : extension_->rootDirs_) {
         QDirIterator fIt(path, QStringList("*.desktop"), QDir::Files,
                          QDirIterator::Subdirectories|QDirIterator::FollowSymlinks);
         while (fIt.hasNext()) {
-            if (_abort) return;
+            if (abort_) return;
             QString path = fIt.next();
 
             // Make new entry
@@ -52,12 +52,12 @@ void Applications::Indexer::run() {
 
             // If it is already in the index copy usage
             vector<shared_ptr<Application>>::iterator indexIt =
-                    std::find_if(_extension->_appIndex.begin(),
-                                _extension->_appIndex.end(),
+                    std::find_if(extension_->appIndex_.begin(),
+                                extension_->appIndex_.end(),
                                 [&path](const shared_ptr<Application>& de){
                                     return de->path()== path;
                                 });
-            if (indexIt != _extension->_appIndex.end())
+            if (indexIt != extension_->appIndex_.end())
                 application = std::make_shared<Application>(path, (*indexIt)->usageCount());
             else
                 application = std::make_shared<Application>(path, 1);
@@ -77,27 +77,27 @@ void Applications::Indexer::run() {
      */
 
     // Lock the access
-    _extension->_indexAccess.lock();
+    extension_->indexAccess_.lock();
 
     // Set the new index
-    _extension->_appIndex = std::move(newIndex);
+    extension_->appIndex_ = std::move(newIndex);
 
     // Reset the offline index
-    _extension->_searchIndex.clear();
+    extension_->searchIndex_.clear();
 
     // Build the new offline index
-    for (const shared_ptr<Application> &de : _extension->_appIndex)
-        _extension->_searchIndex.add(de);
+    for (const shared_ptr<Application> &de : extension_->appIndex_)
+        extension_->searchIndex_.add(de);
 
     // Unlock the accress
-    _extension->_indexAccess.unlock();
+    extension_->indexAccess_.unlock();
 
     // Finally update the watches (maybe folders changed)
-    _extension->_watcher.removePaths(_extension->_watcher.directories());
-    for (const QString &path : _extension->_rootDirs) {
+    extension_->watcher_.removePaths(extension_->watcher_.directories());
+    for (const QString &path : extension_->rootDirs_) {
         QDirIterator dit(path, QDir::Dirs|QDir::NoDotAndDotDot);
         while (dit.hasNext())
-            _extension->_watcher.addPath(dit.next());
+            extension_->watcher_.addPath(dit.next());
     }
 
     /*
@@ -107,7 +107,7 @@ void Applications::Indexer::run() {
 
 
     // Notification
-    msg = QString("Indexed %1 desktop entries.").arg(_extension->_appIndex.size());
+    msg = QString("Indexed %1 desktop entries.").arg(extension_->appIndex_.size());
     emit statusInfo(msg);
     qDebug() << "[Applications]" << msg;
 }

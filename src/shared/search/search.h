@@ -84,7 +84,7 @@ public:
     std::vector<std::shared_ptr<AlbertItem>> search(const QString &req) const;
 
 private:
-    SearchImpl *_impl;
+    SearchImpl *impl_;
 };
 
 
