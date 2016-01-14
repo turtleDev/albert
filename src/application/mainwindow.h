@@ -28,40 +28,50 @@ public:
     MainWindow(QWindow *parent = 0);
     ~MainWindow();
 
-    Q_PROPERTY(bool hideOnFocusLoss MEMBER hideOnFocusLoss_ NOTIFY hideOnFocusLossChanged)
-    Q_PROPERTY(bool showCentered MEMBER showCentered_ NOTIFY showCenteredChanged)
-    Q_PROPERTY(QUrl stylePath MEMBER stylePath_ NOTIFY stylePathChanged)
-
     void show();
     void hide();
     void toggleVisibility();
-    void setSource(const QUrl & url);
     void setModel(QAbstractItemModel* model);
+    void setSource(const QUrl & url);
 
-private:
-    void focusOutEvent(QFocusEvent *event) override;
-    void keyPressEvent(QKeyEvent * event) override;
+    bool showCentered() const;
+    void setShowCentered(bool showCentered);
 
-    bool showCentered_;
-    bool hideOnFocusLoss_;
-    QUrl stylePath_;
-    History history_;
-    QIdentityProxyModel model_;
+    bool hideOnFocusLoss() const;
+    void setHideOnFocusLoss(bool hideOnFocusLoss);
+
+    uint maxProposals() const;
+    void setMaxProposals(uint maxProposals);
+
+    bool alwaysOnTop() const;
+    void setAlwaysOnTop(bool alwaysOnTop);
+
+    bool isTool() const;
+    void setIsTool(bool isTool);
 
     static const QString CFG_CENTERED;
     static const bool    DEF_CENTERED;
     static const QString CFG_HIDEONFOCUSLOSS;
     static const bool    DEF_HIDEONFOCUSLOSS;
+    static const QString CFG_ALWAYS_ON_TOP;
+    static const bool    DEF_ALWAYS_ON_TOP;
+    static const QString CFG_IS_TOOL;
+    static const bool    DEF_IS_TOOL;
     static const QString CFG_STYLEPATH;
     static const QUrl    DEF_STYLEPATH;
     static const QString CFG_MAX_PROPOSALS;
     static const int     DEF_MAX_PROPOSALS;
     static const QString CFG_WND_POS;
 
+protected:
+    bool event(QEvent *event) override;
+
+    bool showCentered_;
+    bool hideOnFocusLoss_;
+    History history_;
+    QIdentityProxyModel model_;
+
 signals:
-    void hideOnFocusLossChanged(bool hideOnFocusLoss);
-    void showCenteredChanged(bool showCentered);
-    void stylePathChanged(QUrl stylePath);
     void queryChanged(const QString&);
     void indexActivated(int);
     void settingsWindowRequested();

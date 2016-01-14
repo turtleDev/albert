@@ -19,6 +19,7 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <csignal>
+#include <stdlib.h>
 #include "albertapp.h"
 #include "mainwindow.h"
 #include "settingswidget.h"
@@ -30,7 +31,7 @@
 AlbertApp::AlbertApp(int &argc, char *argv[]) : QApplication(argc, argv) {
 
     // MAKE SURE THE NEEDED DIRECTORIES EXIST
-    QDir dataDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+    QDir dataDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
     if (!dataDir.exists())
         dataDir.mkpath(".");
 
@@ -50,8 +51,15 @@ AlbertApp::AlbertApp(int &argc, char *argv[]) : QApplication(argc, argv) {
     this->setQuitOnLastWindowClosed(false); // Dont quit after settings close
 
     /*
-     * INITIALIZE WINDOW
+     * INITIALIZE MODULES
      */
+
+    // Do not render threaded unless set explicitely (flicker)
+    char *render_loop =  getenv("QSG_RENDER_LOOP");
+    if (render_loop == nullptr){
+        qDebug() << "QSG_RENDER_LOOP set to 'basic'.";
+        putenv(const_cast<char*>("QSG_RENDER_LOOP=basic"));
+    } else qDebug() << "QSG_RENDER_LOOP is set explicitely. Skip.";
 
     mainWindow_ = new MainWindow;
     hotkeyManager_ = new HotkeyManager;
@@ -140,7 +148,7 @@ QSettings AlbertApp::gSettings() {
 /** ***************************************************************************/
 void AlbertApp::openSettingsWindow() {
     if (!settingsWidget_)
-        settingsWidget_ = new SettingsWidget(hotkeyManager_, pluginManager_);
+        settingsWidget_ = new SettingsWidget(mainWindow_, hotkeyManager_, pluginManager_);
     settingsWidget_->show();
     settingsWidget_->raise();
 }

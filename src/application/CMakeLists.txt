@@ -3,7 +3,6 @@ find_package(Qt5Quick 5.1 REQUIRED)
 
 include_directories(
     hotkey/
-    mainwidget/
     interfaces/
     pluginsystem/
     pluginsystem/extension/

@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <QDir>
+#include <QDirIterator>
 #include <QDebug>
 #include <QStandardPaths>
 #include <QMessageBox>
@@ -23,15 +24,15 @@
 #include <QDesktopWidget>
 #include <QFocusEvent>
 #include "settingswidget.h"
+#include "mainwindow.h"
 #include "hotkeymanager.h"
 #include "pluginmanager.h"
 #include "pluginmodel.h"
 #include "iextension.h"
 
-
 /** ***************************************************************************/
-SettingsWidget::SettingsWidget(/*MainWidget *mainWidget, */HotkeyManager *hotkeyManager, PluginManager *pluginManager, QWidget *parent, Qt::WindowFlags f)
-    : QWidget(parent, f), /*_mainWidget(mainWidget),*/ hotkeyManager_(hotkeyManager), pluginManager_(pluginManager) {
+SettingsWidget::SettingsWidget(MainWindow *mainWindow, HotkeyManager *hotkeyManager, PluginManager *pluginManager, QWidget *parent, Qt::WindowFlags f)
+    : QWidget(parent, f), mainWindow_(mainWindow), hotkeyManager_(hotkeyManager), pluginManager_(pluginManager) {
 
     ui.setupUi(this);
     setWindowFlags(Qt::Window|Qt::WindowCloseButtonHint);
@@ -51,44 +52,52 @@ SettingsWidget::SettingsWidget(/*MainWidget *mainWidget, */HotkeyManager *hotkey
     connect(ui.grabKeyButton_hotkey, &GrabKeyButton::keyCombinationPressed,
             this, &SettingsWidget::changeHotkey);
 
+    // ALWAYS ON TOP
+    ui.checkBox_onTop->setChecked(mainWindow_->alwaysOnTop());
+    connect(ui.checkBox_onTop, &QCheckBox::toggled, mainWindow_, &MainWindow::setAlwaysOnTop);
 
-//    // ALWAYS CENTER
-//    ui.checkBox_center->setChecked(mainWidget->showCenterd());
-//    connect(ui.checkBox_center, &QCheckBox::toggled, mainWidget,
-//            &MainWidget::setShowCentered);
+    // TOOL WINDOW
+    ui.checkBox_tool->setChecked(mainWindow_->isTool());
+    connect(ui.checkBox_tool, &QCheckBox::toggled, mainWindow_, &MainWindow::setIsTool);
 
-//    // MAX PROPOSALS
-//    ui.spinBox_proposals->setValue(mainWidget->ui.proposalList->maxItems());
-//    connect(ui.spinBox_proposals, (void (QSpinBox::*)(int))&QSpinBox::valueChanged,
-//            mainWidget->ui.proposalList, &ProposalList::setMaxItems);
+    // HIDE ON FOCUS OUT
+    ui.checkBox_hideOnFocusOut->setChecked(mainWindow_->hideOnFocusLoss());
+    connect(ui.checkBox_hideOnFocusOut, &QCheckBox::toggled, mainWindow_, &MainWindow::setHideOnFocusLoss);
 
-//    // INFO BELOW ITEM
-//    ui.checkBox_showInfo->setChecked(mainWidget->ui.proposalList->showInfo());
-//    connect(ui.checkBox_showInfo, &QCheckBox::toggled,
-//            mainWidget->ui.proposalList, &ProposalList::setShowInfo);
+    // ALWAYS CENTER
+    ui.checkBox_center->setChecked(mainWindow_->showCentered());
+    connect(ui.checkBox_center, &QCheckBox::toggled, mainWindow_, &MainWindow::setShowCentered);
 
-//    // INFO FOR UNSELECTED
-//    ui.checkBox_selectedOnly->setChecked(mainWidget->ui.proposalList->selectedOnly());
-//    connect(ui.checkBox_selectedOnly, &QCheckBox::toggled,
-//            mainWidget->ui.proposalList, &ProposalList::setSelectedOnly);
+    // MAX PROPOSALS
+    ui.spinBox_proposals->setValue(mainWindow_->maxProposals());
+    connect(ui.spinBox_proposals, (void (QSpinBox::*)(int))&QSpinBox::valueChanged,
+            mainWindow_, &MainWindow::setMaxProposals);
 
-
-//    // THEMES
-//    QFileInfoList themes;
-//    int i = 0 ;
-//    QStringList themeDirs =
-//            QStandardPaths::locateAll(QStandardPaths::DataLocation, "themes",
-//                                      QStandardPaths::LocateDirectory);
-//    for (QDir d : themeDirs)
-//        themes << d.entryInfoList(QStringList("*.qss"), QDir::Files | QDir::NoSymLinks);
-//    for (QFileInfo fi : themes) {
-//        ui.comboBox_themes->addItem(fi.baseName(), fi.canonicalFilePath());
-//        if ( fi.baseName() == mainWidget->theme())
-//            ui.comboBox_themes->setCurrentIndex(i);
-//        ++i;
-//    }
-//    connect(ui.comboBox_themes, (void (QComboBox::*)(int))&QComboBox::currentIndexChanged,
-//            this, &SettingsWidget::onThemeChanged);
+    // STYLES
+    // Get style dirs
+    QStringList styleDirPaths = QStandardPaths::locateAll(
+                QStandardPaths::AppDataLocation,
+                "styles", QStandardPaths::LocateDirectory);
+    // Get style files
+    QFileInfoList styles;
+    for (QString &styleDirPath : styleDirPaths){
+        QDirIterator it(styleDirPath, {"*.qml"}, QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            qDebug() << it.next();
+            styles << it.fileInfo();
+        }
+    }
+    // Fill the combobox
+    int i = 0 ;
+    ui.comboBox_style->addItem("Standard", QUrl(mainWindow_->DEF_STYLEPATH));
+    for (QFileInfo style : styles) {
+        ui.comboBox_style->addItem(style.baseName(), QUrl(style.canonicalFilePath()));
+        if ( QUrl(style.canonicalFilePath()) == mainWindow_->source() )
+            ui.comboBox_style->setCurrentIndex(i);
+        ++i;
+    }
+    connect(ui.comboBox_style, (void (QComboBox::*)(int))&QComboBox::currentIndexChanged,
+            this, &SettingsWidget::onThemeChanged);
 
 
     /*
@@ -109,6 +118,12 @@ SettingsWidget::SettingsWidget(/*MainWidget *mainWidget, */HotkeyManager *hotkey
      * ABOUT TAB
      */
     ui.about_text->setText(QString(ui.about_text->text()).replace("___versionstring___", qApp->applicationVersion()));
+
+    QDesktopWidget *dw = QApplication::desktop();
+    move(dw->availableGeometry(dw->screenNumber(QCursor::pos())).center()
+                -QPoint(width()/2,height()/2));
+    raise();
+    activateWindow();
 }
 
 
@@ -156,15 +171,11 @@ void SettingsWidget::changeHotkey(int newhk) {
 
 /** ***************************************************************************/
 void SettingsWidget::onThemeChanged(int i) {
-//    // Apply and save the theme
-//    QString currentTheme = mainWidget_->theme();
-//    if (!_mainWidget->setTheme(ui.comboBox_themes->itemText(i))) {
-//        QMessageBox msgBox(QMessageBox::Critical, "Error", "Could not apply theme.");
-//        msgBox.exec();
-//        if (!_mainWidget->setTheme(currentTheme)) {
-//           qFatal("Rolling back theme failed.");
-//        }
-//    }
+    // Apply the theme
+    uint numProp = mainWindow_->maxProposals();
+    QUrl url = ui.comboBox_style->itemData(i).toUrl();
+    mainWindow_->setSource(url);
+    mainWindow_->setMaxProposals(numProp);
 }
 
 

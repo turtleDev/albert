@@ -1,15 +1,7 @@
-import QtQuick 2.5
+import QtQuick 2.0
 import QtGraphicalEffects 1.0
 
 FocusScope {
-    // ▼ DO NOT CHANGE THIS ▼
-    property int nShownItems: 5 //
-    signal indexActivated(int index)
-    signal queryChanged(string text)
-    signal settingsWindowRequested()
-    function onMainWindowVisibleChanged() { historyTextInput.clearLine(); }
-    // ▲ DO NOT CHANGE THIS ▲
-
     property string color1: "#999"
     property string color2: "#555"
     property string color3: "#80FFC0"
@@ -30,14 +22,14 @@ FocusScope {
                         : resultsList.incrementCurrentIndex()
                 return;
             case Qt.Key_PageUp:
-                resultsList.currentIndex - nShownItems < 0
+                resultsList.currentIndex - maxProposals < 0
                         ? resultsList.currentIndex = 0
-                        : resultsList.currentIndex -= nShownItems
+                        : resultsList.currentIndex -= maxProposals
                 return;
             case Qt.Key_PageDown:
-                resultsList.currentIndex + nShownItems > resultsList.count
+                resultsList.currentIndex + maxProposals > resultsList.count
                         ? resultsList.currentIndex = resultsList.count-1
-                        : resultsList.currentIndex += nShownItems
+                        : resultsList.currentIndex += maxProposals
                 return;
         }
         event.ignore
@@ -51,7 +43,13 @@ FocusScope {
         anchors.right: parent.right
         anchors.left: parent.left
         radius: 16
-        color: "#80808080"
+        color: "#8080FFC0"
+        NumberAnimation on opacity {
+            duration : 600
+            easing.type: Easing.InOutQuint
+            from: 0
+            to: 1
+        }
 
         Rectangle {
             id: topFrame
@@ -77,12 +75,6 @@ FocusScope {
                     height: historyTextInput.height
                     color: color2
                     radius: 4
-                    NumberAnimation on opacity {
-                        duration : 600
-                        easing.type: Easing.InOutQuint
-                        from: 0
-                        to: 1
-                    }
 
                     HistoryTextInput {
                         id: historyTextInput
@@ -181,7 +173,7 @@ FocusScope {
                 ListView {
                     id: resultsList
                     width: parent.width
-                    height: Math.min(nShownItems, count)*48
+                    height: Math.min(maxProposals, count)*48
                     model: resultsModel
                     visible : (count===0) ? false : true;
                     snapMode: ListView.SnapToItem
@@ -273,4 +265,30 @@ FocusScope {
             }
         }
     }
+
+    // ▼ ▼ ▼ ▼ ▼ DO NOT CHANGE THIS UNLESS YOU KNOW WHAT YOU ARE DOING ▼ ▼ ▼ ▼ ▼
+    property int maxProposals
+    signal indexActivated(int index)
+    signal queryChanged(string text)
+    signal settingsWindowRequested()
+    function onMainWindowVisibleChanged() { historyTextInput.clearLine(); }
+    /*
+     * Currently the interface with the program logic comprises the following:
+     *
+     * Context property 'model'
+     * Context property 'history'
+     * Listeners on signal: 'indexActivated'
+     * Listeners on signal: 'queryChanged'
+     * Listeners on signal: 'settingsWindowRequested'
+     * External mutations of the property maxProposals
+     * External invokation of 'onMainWindowVisibleChanged' (Focus out)
+     *
+     * Canges to this interface will increment the minor version of the
+     * interface version, if the new interface is a superset of the last one,
+     * i.e. it is backwards compatible, otherwise the major version will be
+     * incremented.
+     *
+     * Note: As long albert is in alpha stage the interface may break anytime.
+     */
+    property string interfaceVersion: "0.1"
 }
