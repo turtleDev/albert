@@ -31,9 +31,11 @@ public:
 private:
     void keyPressEvent(QKeyEvent * event) override;
     void closeEvent(QCloseEvent * event) override;
-    void onThemeChanged(int);
-    void onPluginDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles);
+
     void changeHotkey(int);
+    void onThemeChanged(int);
+    void onPresetChanged(const QString &text);
+    void onPluginDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles);
     void updatePluginInformations(const QModelIndex & curr);
 
     MainWindow *mainWindow_;

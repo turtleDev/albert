@@ -32,12 +32,8 @@ const QString MainWindow::CFG_HIDEONFOCUSLOSS = "hideOnFocusLoss";
 const bool    MainWindow::DEF_HIDEONFOCUSLOSS = true;
 const QString MainWindow::CFG_ALWAYS_ON_TOP   = "alwaysOnTop";
 const bool    MainWindow::DEF_ALWAYS_ON_TOP   = true;
-const QString MainWindow::CFG_IS_TOOL         = "isToolWindow";
-const bool    MainWindow::DEF_IS_TOOL         = false;
 const QString MainWindow::CFG_STYLEPATH       = "stylePath";
 const QUrl    MainWindow::DEF_STYLEPATH       = QUrl("qrc:/resources/ui/MainComponent.qml");
-const QString MainWindow::CFG_MAX_PROPOSALS   = "itemCount";
-const int     MainWindow::DEF_MAX_PROPOSALS   = 5;
 const QString MainWindow::CFG_WND_POS         = "windowPosition";
 
 /** ***************************************************************************/
@@ -45,7 +41,7 @@ MainWindow::MainWindow(QWindow *parent)
     : QQuickView(parent),
       history_(QDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)).filePath("history.dat")){
     setColor(Qt::transparent);
-    setFlags(Qt::Dialog
+    setFlags(Qt::Tool
              | Qt::WindowStaysOnTopHint
              | Qt::FramelessWindowHint
              | Qt::WindowCloseButtonHint // No close event w/o this
@@ -61,10 +57,7 @@ MainWindow::MainWindow(QWindow *parent)
     setShowCentered(s.value(CFG_CENTERED, DEF_CENTERED).toBool());
     setHideOnFocusLoss(s.value(CFG_HIDEONFOCUSLOSS, DEF_HIDEONFOCUSLOSS).toBool());
     setAlwaysOnTop(s.value(CFG_ALWAYS_ON_TOP, DEF_ALWAYS_ON_TOP).toBool());
-    setIsTool(s.value(CFG_IS_TOOL, DEF_IS_TOOL).toBool());
     setSource(s.value(CFG_STYLEPATH, DEF_STYLEPATH).toUrl());
-    setMaxProposals(s.value(CFG_MAX_PROPOSALS, DEF_MAX_PROPOSALS).toUInt()); // Dont set before source
-    hide();
 }
 
 
@@ -76,10 +69,9 @@ MainWindow::~MainWindow() {
     s.setValue(CFG_CENTERED, showCentered_);
     s.setValue(CFG_HIDEONFOCUSLOSS, hideOnFocusLoss_);
     s.setValue(CFG_ALWAYS_ON_TOP, alwaysOnTop());
-    s.setValue(CFG_IS_TOOL, isTool());
     s.setValue(CFG_STYLEPATH, source());
-    s.setValue(CFG_MAX_PROPOSALS, maxProposals());
     s.setValue(CFG_WND_POS, position());
+    setSource(QUrl()); // Saves the themeconfig
 }
 
 
@@ -114,12 +106,84 @@ void MainWindow::toggleVisibility() {
 
 /** ***************************************************************************/
 void MainWindow::setSource(const QUrl &url) {
-    QQuickView::setSource(url);
-    QObject *object = rootObject();
-    connect(object, SIGNAL(queryChanged(QString)), this, SIGNAL(queryChanged(const QString&)));
-    connect(object, SIGNAL(indexActivated(int)), this, SIGNAL(indexActivated(int)));
-    connect(object, SIGNAL(settingsWindowRequested()), this, SIGNAL(settingsWindowRequested()));
-    connect(this, SIGNAL(visibleChanged(bool)), object, SLOT(onMainWindowVisibleChanged()));
+    // Prepare the theme property files
+    QString p = QDir(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation))
+            .filePath("styles.conf");
+    QSettings themeProperties(p, QSettings::IniFormat);
+
+    // If source is not empty save all propeties
+    if (!source().isEmpty()) {
+        themeProperties.beginGroup(source().toEncoded());
+        for (QString &prop : availableProperties()) {
+            QVariant value = property(prop.toLatin1().data());
+            if (value.isValid())
+                themeProperties.setValue(prop, value);
+        }
+        themeProperties.endGroup();
+    }
+
+    if (!url.isEmpty()) {
+        // Apply the source
+        QQuickView::setSource(url);
+
+        // Connect the sigals
+        QObject *object = rootObject();
+        connect(object, SIGNAL(queryChanged(QString)), this, SIGNAL(queryChanged(const QString&)));
+        connect(object, SIGNAL(indexActivated(int)), this, SIGNAL(indexActivated(int)));
+        connect(object, SIGNAL(settingsWindowRequested()), this, SIGNAL(settingsWindowRequested()));
+        connect(this, SIGNAL(visibleChanged(bool)), object, SLOT(onMainWindowVisibleChanged()));
+
+        // Load the theme properties
+        themeProperties.beginGroup(source().toEncoded());
+        for (QString &prop : availableProperties()) {
+            if (themeProperties.contains(prop))
+                setProperty(prop.toLatin1().data(), themeProperties.value(prop));
+        }
+        themeProperties.endGroup();
+    }
+}
+
+
+
+/** ***************************************************************************/
+QStringList MainWindow::availableProperties() {
+    QVariant returnedValue;
+    QMetaObject::invokeMethod(rootObject(), "availableProperties",
+                              Q_RETURN_ARG(QVariant, returnedValue));
+    return returnedValue.toStringList();
+}
+
+
+
+/** ***************************************************************************/
+QVariant MainWindow::property(const char *name) const {
+    return rootObject()->property(name);
+}
+
+
+
+/** ***************************************************************************/
+void MainWindow::setProperty(const char *attribute, const QVariant &value) {
+    rootObject()->setProperty(attribute, value);
+    rootObject()->update();
+}
+
+
+
+/** ***************************************************************************/
+QStringList MainWindow::availablePresets() {
+    QVariant returnedValue;
+    QMetaObject::invokeMethod(rootObject(), "availablePresets",
+                              Q_RETURN_ARG(QVariant, returnedValue));
+    return returnedValue.toStringList();
+}
+
+
+
+/** ***************************************************************************/
+void MainWindow::setPreset(const QString &name){
+    QMetaObject::invokeMethod(rootObject(), "setPreset",
+                              Q_ARG(QVariant, QVariant::fromValue(name)));
 }
 
 
@@ -188,20 +252,6 @@ bool MainWindow::event(QEvent *event) {
 
 
 /** ***************************************************************************/
-uint MainWindow::maxProposals() const {
-    return rootObject()->property("maxProposals").toUInt();
-}
-
-
-
-/** ***************************************************************************/
-void MainWindow::setMaxProposals(uint maxProposals) {
-    rootObject()->setProperty("maxProposals", maxProposals);
-}
-
-
-
-/** ***************************************************************************/
 bool MainWindow::alwaysOnTop() const {
     return flags() & Qt::WindowStaysOnTopHint;
 }
@@ -213,25 +263,6 @@ void MainWindow::setAlwaysOnTop(bool alwaysOnTop) {
     alwaysOnTop
             ? setFlags(flags() | Qt::WindowStaysOnTopHint)
             : setFlags(flags() & ~Qt::WindowStaysOnTopHint);
-    // Flags changed. Update
-    QQuickView::hide();
-}
-
-
-
-/** ***************************************************************************/
-bool MainWindow::isTool() const {
-    return flags() & Qt::Tool;
-}
-
-
-
-/** ***************************************************************************/
-void MainWindow::setIsTool(bool isTool) {
-    // Tool = Dialog|Popup
-    isTool
-            ? setFlags(flags() | Qt::Popup)
-            : setFlags((flags() & ~Qt::Popup));
     // Flags changed. Update
     QQuickView::hide();
 }

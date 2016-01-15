@@ -29,6 +29,7 @@
 #include "pluginmanager.h"
 #include "pluginmodel.h"
 #include "iextension.h"
+#include "propertyeditor.h"
 
 /** ***************************************************************************/
 SettingsWidget::SettingsWidget(MainWindow *mainWindow, HotkeyManager *hotkeyManager, PluginManager *pluginManager, QWidget *parent, Qt::WindowFlags f)
@@ -56,10 +57,6 @@ SettingsWidget::SettingsWidget(MainWindow *mainWindow, HotkeyManager *hotkeyMana
     ui.checkBox_onTop->setChecked(mainWindow_->alwaysOnTop());
     connect(ui.checkBox_onTop, &QCheckBox::toggled, mainWindow_, &MainWindow::setAlwaysOnTop);
 
-    // TOOL WINDOW
-    ui.checkBox_tool->setChecked(mainWindow_->isTool());
-    connect(ui.checkBox_tool, &QCheckBox::toggled, mainWindow_, &MainWindow::setIsTool);
-
     // HIDE ON FOCUS OUT
     ui.checkBox_hideOnFocusOut->setChecked(mainWindow_->hideOnFocusLoss());
     connect(ui.checkBox_hideOnFocusOut, &QCheckBox::toggled, mainWindow_, &MainWindow::setHideOnFocusLoss);
@@ -67,11 +64,6 @@ SettingsWidget::SettingsWidget(MainWindow *mainWindow, HotkeyManager *hotkeyMana
     // ALWAYS CENTER
     ui.checkBox_center->setChecked(mainWindow_->showCentered());
     connect(ui.checkBox_center, &QCheckBox::toggled, mainWindow_, &MainWindow::setShowCentered);
-
-    // MAX PROPOSALS
-    ui.spinBox_proposals->setValue(mainWindow_->maxProposals());
-    connect(ui.spinBox_proposals, (void (QSpinBox::*)(int))&QSpinBox::valueChanged,
-            mainWindow_, &MainWindow::setMaxProposals);
 
     // STYLES
     // Get style dirs
@@ -98,6 +90,20 @@ SettingsWidget::SettingsWidget(MainWindow *mainWindow, HotkeyManager *hotkeyMana
     }
     connect(ui.comboBox_style, (void (QComboBox::*)(int))&QComboBox::currentIndexChanged,
             this, &SettingsWidget::onThemeChanged);
+
+    // PROPERTY EDITOR
+    connect(ui.toolButton_propertyEditor, &QToolButton::clicked, [this](){
+        PropertyEditor pe(mainWindow_, this);
+        pe.exec();
+    });
+
+    // PRESETS
+    ui.comboBox_presets->clear();
+    ui.comboBox_presets->addItem("Load preset...");
+    ui.comboBox_presets->addItems(mainWindow_->availablePresets());
+    connect(ui.comboBox_presets, (void (QComboBox::*)(const QString &))&QComboBox::currentIndexChanged,
+            this, &SettingsWidget::onPresetChanged);
+
 
 
     /*
@@ -172,10 +178,25 @@ void SettingsWidget::changeHotkey(int newhk) {
 /** ***************************************************************************/
 void SettingsWidget::onThemeChanged(int i) {
     // Apply the theme
-    uint numProp = mainWindow_->maxProposals();
     QUrl url = ui.comboBox_style->itemData(i).toUrl();
     mainWindow_->setSource(url);
-    mainWindow_->setMaxProposals(numProp);
+
+    // Fill presets
+    ui.comboBox_presets->clear();
+    ui.comboBox_presets->addItem("Load preset...");
+    ui.comboBox_presets->addItems(mainWindow_->availablePresets());
+}
+
+
+
+/** ***************************************************************************/
+void SettingsWidget::onPresetChanged(const QString &text) {
+    // Remove the placeholder
+    if (text != "Load preset..." && ui.comboBox_presets->itemText(0) == "Load preset...")
+        ui.comboBox_presets->removeItem(0);
+
+    // Apply the preset
+    mainWindow_->setPreset(text);
 }
 
 

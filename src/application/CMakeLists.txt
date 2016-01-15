@@ -27,6 +27,8 @@ set(SRC
     settingswidget/grabkeybutton.cpp
     settingswidget/settingswidget.cpp
     settingswidget/pluginmodel.cpp
+    settingswidget/propertyeditor.cpp
+    settingswidget/colordialog.hpp
 )
 
 set(LIB

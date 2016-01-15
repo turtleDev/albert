@@ -2,38 +2,14 @@ import QtQuick 2.0
 import QtGraphicalEffects 1.0
 
 FocusScope {
-    property string color1: "#999"
-    property string color2: "#555"
-    property string color3: "#80FFC0"
-    width: bottomFrame.width
-    height: bottomFrame.height
-    focus: true
-    Keys.onPressed: {
-        event.accept
-        switch (event.key) {
-            case Qt.Key_Up:
-                (resultsList.currentIndex===-1 || event.modifiers===Qt.ControlModifier)
-                        ? historyTextInput.nextIteration()
-                        : resultsList.decrementCurrentIndex()
-                return;
-            case Qt.Key_Down:
-                (event.modifiers===Qt.ControlModifier)
-                        ? historyTextInput.prevIteration()
-                        : resultsList.incrementCurrentIndex()
-                return;
-            case Qt.Key_PageUp:
-                resultsList.currentIndex - maxProposals < 0
-                        ? resultsList.currentIndex = 0
-                        : resultsList.currentIndex -= maxProposals
-                return;
-            case Qt.Key_PageDown:
-                resultsList.currentIndex + maxProposals > resultsList.count
-                        ? resultsList.currentIndex = resultsList.count-1
-                        : resultsList.currentIndex += maxProposals
-                return;
-        }
-        event.ignore
-    }
+    // ▼▲ Settable properties of this style ▲▼
+    property color background_color
+    property color foreground_color
+    property color highlight_color
+    property color frame_color
+    property int space
+    property int maxProposals
+    // ▲▼ Settable properties of this style ▼▲
 
     Rectangle {
         id: bottomFrame
@@ -42,14 +18,8 @@ FocusScope {
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.left: parent.left
-        radius: 16
-        color: "#8080FFC0"
-        NumberAnimation on opacity {
-            duration : 600
-            easing.type: Easing.InOutQuint
-            from: 0
-            to: 1
-        }
+        radius: space*2
+        color: frame_color
 
         Rectangle {
             id: topFrame
@@ -57,24 +27,24 @@ FocusScope {
             anchors.top: parent.top
             anchors.right: parent.right
             anchors.left: parent.left
-            anchors.margins: 8
-            radius: 8
-            color: color1
+            anchors.margins: space
+            radius: space
+            color: background_color
 
             Column {
                 id: content
                 anchors.top: parent.top
                 anchors.right: parent.right
                 anchors.left: parent.left
-                anchors.margins: 8
-                spacing: 8
+                anchors.margins: space
+                spacing: space
 
                 Rectangle {
                     id: historyTextInputFrame
                     width: parent.width
                     height: historyTextInput.height
-                    color: color2
-                    radius: 4
+                    color: Qt.darker(background_color, 2)
+                    radius: space/2
 
                     HistoryTextInput {
                         id: historyTextInput
@@ -85,19 +55,19 @@ FocusScope {
                         echoMode: TextInput.Normal
                         font.family: "DejaVu Sans"
                         font.pixelSize: 36
-                        color: color1
-                        selectedTextColor: color2
-                        selectionColor: color1
+                        color: foreground_color
+                        selectedTextColor: background_color
+                        selectionColor: highlight_color
                         selectByMouse: true
                         focus: true
-
                         cursorDelegate : Component {
                             Item {
                                 id: cursor
-                                Behavior on x { NumberAnimation { } }
-                                Behavior on y { NumberAnimation { } }
-                                Behavior on height { NumberAnimation { duration: 200 } }
-                                Rectangle {y: 2; width: 1; color: color3; height: parent.height-4;}
+                                Rectangle {
+                                    y: 2; width: 1
+                                    height: parent.height-4
+                                    color: highlight_color
+                                }
                                 SequentialAnimation on opacity {
                                     loops: Animation.Infinite;
                                     NumberAnimation { to: 0; duration: 1000; easing.type: Easing.InOutCubic}
@@ -126,12 +96,12 @@ FocusScope {
 
                     Item {
                         id: settingsbutton
-                        width: 14
-                        height: 14
+                        width: 13
+                        height: 13
                         anchors.top: parent.top
                         anchors.right: parent.right
-                        anchors.topMargin: 2
-                        anchors.rightMargin: 2
+                        anchors.topMargin: 3
+                        anchors.rightMargin: 3
 
                         Image {
                             id: gearmask
@@ -144,7 +114,7 @@ FocusScope {
                         Rectangle {
                             id: gearcolor
                             anchors.fill: parent
-                            color: color1
+                            color: background_color
                             visible: false
                         }
                         OpacityMask {
@@ -164,8 +134,10 @@ FocusScope {
                             anchors.fill: parent
                             hoverEnabled: true
                             onClicked: settingsWindowRequested()
-                            onEntered: gearcolor.color=color3
-                            onExited: gearcolor.color=color1
+                            onEntered: gearcolor.color=foreground_color
+                            onExited: gearcolor.color=background_color
+                            onPressed: gearcolor.color=highlight_color
+                            onReleased: gearcolor.color=background_color
                         }
                     }
                 }
@@ -201,17 +173,13 @@ FocusScope {
                                     height: width
                                     radius: 8
                                     anchors.centerIn: parent
-                                    gradient: Gradient {
-                                        GradientStop { position: 0.0; color: color1 }
-                                        GradientStop { position: 1.0; color: color2 }
-                                    }
-
+                                    color: Qt.darker(background_color, 2)
                                     Text {
                                         anchors.fill: parent
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
                                         font.pixelSize : parent.height-12
-                                        color: resultsList.currentIndex===index?color3:color2
+                                        color: resultsList.currentIndex===index?highlight_color:foreground_color
                                         text: display.slice(0,1);
                                         font.family: "DejaVu Sans ExtraLight"
                                         font.capitalization: Font.AllUppercase
@@ -232,7 +200,7 @@ FocusScope {
                                     width: parent.width
                                     text: model.display
                                     elide: Text.ElideMiddle
-                                    color: resultsList.currentIndex===index?color3:color2
+                                    color: resultsList.currentIndex===index?highlight_color:foreground_color
                                     font.pixelSize: 26
                                     Behavior on color {ColorAnimation {duration:100;}}
                                 }
@@ -243,7 +211,7 @@ FocusScope {
                                     width: parent.width
                                     text: model.toolTip
                                     elide: Text.ElideMiddle
-                                    color: resultsList.currentIndex===index?color3:color2
+                                    color: resultsList.currentIndex===index?highlight_color:foreground_color
                                     font.pixelSize:12
                                     Behavior on color {ColorAnimation {duration:100;}}
                                 }
@@ -266,8 +234,91 @@ FocusScope {
         }
     }
 
+    width: bottomFrame.width
+    height: bottomFrame.height
+    focus: true
+    Keys.onPressed: {
+        event.accept
+        switch (event.key) {
+            case Qt.Key_Up:
+                (resultsList.currentIndex===-1 || event.modifiers===Qt.ControlModifier)
+                        ? historyTextInput.nextIteration()
+                        : resultsList.decrementCurrentIndex()
+                return;
+            case Qt.Key_Down:
+                (event.modifiers===Qt.ControlModifier)
+                        ? historyTextInput.prevIteration()
+                        : resultsList.incrementCurrentIndex()
+                return;
+            case Qt.Key_PageUp:
+                resultsList.currentIndex - maxProposals < 0
+                        ? resultsList.currentIndex = 0
+                        : resultsList.currentIndex -= maxProposals
+                return;
+            case Qt.Key_PageDown:
+                resultsList.currentIndex + maxProposals > resultsList.count
+                        ? resultsList.currentIndex = resultsList.count-1
+                        : resultsList.currentIndex += maxProposals
+                return;
+        }
+        event.ignore
+    }
+
+    Component.onCompleted: setPreset("Mono")
+
+
+    function availableProperties() {
+        return ["background_color","foreground_color","highlight_color",
+                "frame_color","space","maxProposals"];
+    }
+    function availablePresets() {
+        return ["Mono", "Orange","Magenta","Mint","Green","Blue","Violet"];
+    }
+    function setPreset(p) {
+        switch (p) {
+        case "Mono":
+            background_color= "#444"
+            foreground_color= "#AAA"
+            highlight_color= "#FFF"
+            frame_color= "#80808080"
+            space= 7
+            maxProposals= 5
+            break;
+        case "Orange":
+            setPreset("Mono")
+            highlight_color= "#FFA040"
+            frame_color= "#80FFA040"
+            break;
+        case "Magenta":
+            setPreset("Mono")
+            highlight_color= "#FF40A0"
+            frame_color= "#80FF40A0"
+            break;
+        case "Mint":
+            setPreset("Mono")
+            highlight_color= "#40FFA0"
+            frame_color= "#8040FFA0"
+            break;
+        case "Green":
+            setPreset("Mono")
+            highlight_color= "#A0FF40"
+            frame_color= "#80A0FF40"
+            break;
+        case "Blue":
+            setPreset("Mono")
+            highlight_color= "#40A0FF"
+            frame_color= "#8040A0FF"
+            break;
+        case "Violet":
+            setPreset("Mono")
+            highlight_color= "#A040FF"
+            frame_color= "#80A040FF"
+            break;
+        }
+    }
+
+
     // ▼ ▼ ▼ ▼ ▼ DO NOT CHANGE THIS UNLESS YOU KNOW WHAT YOU ARE DOING ▼ ▼ ▼ ▼ ▼
-    property int maxProposals
     signal indexActivated(int index)
     signal queryChanged(string text)
     signal settingsWindowRequested()

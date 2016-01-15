@@ -34,20 +34,21 @@ public:
     void setModel(QAbstractItemModel* model);
     void setSource(const QUrl & url);
 
+    QStringList availableProperties();
+    QVariant property(const char *name) const;
+    void setProperty(const char *attribute, const QVariant &value);
+
+    QStringList availablePresets();
+    void setPreset(const QString& name);
+
     bool showCentered() const;
     void setShowCentered(bool showCentered);
 
     bool hideOnFocusLoss() const;
     void setHideOnFocusLoss(bool hideOnFocusLoss);
 
-    uint maxProposals() const;
-    void setMaxProposals(uint maxProposals);
-
     bool alwaysOnTop() const;
     void setAlwaysOnTop(bool alwaysOnTop);
-
-    bool isTool() const;
-    void setIsTool(bool isTool);
 
     static const QString CFG_CENTERED;
     static const bool    DEF_CENTERED;
@@ -55,12 +56,8 @@ public:
     static const bool    DEF_HIDEONFOCUSLOSS;
     static const QString CFG_ALWAYS_ON_TOP;
     static const bool    DEF_ALWAYS_ON_TOP;
-    static const QString CFG_IS_TOOL;
-    static const bool    DEF_IS_TOOL;
     static const QString CFG_STYLEPATH;
     static const QUrl    DEF_STYLEPATH;
-    static const QString CFG_MAX_PROPOSALS;
-    static const int     DEF_MAX_PROPOSALS;
     static const QString CFG_WND_POS;
 
 protected:
