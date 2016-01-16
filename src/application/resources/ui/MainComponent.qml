@@ -7,17 +7,24 @@ FocusScope {
     property color foreground_color
     property color highlight_color
     property color frame_color
+    property int settingsbutton_size
+    property int input_fontsize
+    property int item_height
+    property int item_title_fontsize
+    property int item_description_fontsize
+    property int max_items
     property int space
-    property int maxProposals
+    property int window_width
     // ▲▼ Settable properties of this style ▼▲
+
+    width: bottomFrame.width
+    height: bottomFrame.height
+    focus: true
 
     Rectangle {
         id: bottomFrame
-        width: 720
+        width: window_width
         height: topFrame.height+2*topFrame.anchors.margins
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.left: parent.left
         radius: space*2
         color: frame_color
 
@@ -54,7 +61,7 @@ FocusScope {
                         anchors.margins: 4
                         echoMode: TextInput.Normal
                         font.family: "DejaVu Sans"
-                        font.pixelSize: 36
+                        font.pixelSize: input_fontsize
                         color: foreground_color
                         selectedTextColor: background_color
                         selectionColor: highlight_color
@@ -96,8 +103,8 @@ FocusScope {
 
                     Item {
                         id: settingsbutton
-                        width: 13
-                        height: 13
+                        width: settingsbutton_size
+                        height: width
                         anchors.top: parent.top
                         anchors.right: parent.right
                         anchors.topMargin: 3
@@ -145,7 +152,7 @@ FocusScope {
                 ListView {
                     id: resultsList
                     width: parent.width
-                    height: Math.min(maxProposals, count)*48
+                    height: Math.min(max_items, count)*(item_height+spacing)-spacing
                     model: resultsModel
                     visible : (count===0) ? false : true;
                     snapMode: ListView.SnapToItem
@@ -154,13 +161,13 @@ FocusScope {
                     delegate: listDelegate
                     highlightMoveDuration : 200
                     highlightMoveVelocity : 1000
+                    spacing: space
 
                     Component {
                         id: listDelegate
                         Item {
                             id: listItem
-
-                            height: 48
+                            height: item_height
                             width: resultsList.width
 
                             Item {
@@ -169,9 +176,9 @@ FocusScope {
                                 height: parent.height
 
                                 Rectangle {
-                                    width: parent.height-8
+                                    width: parent.height
                                     height: width
-                                    radius: 8
+                                    radius: space
                                     anchors.centerIn: parent
                                     color: Qt.darker(background_color, 2)
                                     Text {
@@ -188,12 +195,12 @@ FocusScope {
                                 }
                             }
 
-                            Item {
+                            Column{
                                 id: listItemTextArea
                                 anchors.left: listItemIconArea.right
                                 anchors.right: parent.right
-                                anchors.leftMargin: 8
-                                height: parent.height
+                                anchors.leftMargin: space
+                                anchors.verticalCenter: listItemIconArea.verticalCenter
 
                                 Text {
                                     id: listItemTextfield
@@ -201,20 +208,19 @@ FocusScope {
                                     text: model.display
                                     elide: Text.ElideMiddle
                                     color: resultsList.currentIndex===index?highlight_color:foreground_color
-                                    font.pixelSize: 26
+                                    font.pixelSize: item_title_fontsize
                                     Behavior on color {ColorAnimation {duration:100;}}
                                 }
 
                                 Text {
                                     id: listItemInfofield
-                                    anchors.top: listItemTextfield.bottom
                                     width: parent.width
                                     text: model.toolTip
                                     elide: Text.ElideMiddle
                                     color: resultsList.currentIndex===index?highlight_color:foreground_color
-                                    font.pixelSize:12
+                                    font.pixelSize: item_description_fontsize
                                     Behavior on color {ColorAnimation {duration:100;}}
-                                }
+                                 }
                             }
 
                             MouseArea {
@@ -234,9 +240,6 @@ FocusScope {
         }
     }
 
-    width: bottomFrame.width
-    height: bottomFrame.height
-    focus: true
     Keys.onPressed: {
         event.accept
         switch (event.key) {
@@ -251,66 +254,82 @@ FocusScope {
                         : resultsList.incrementCurrentIndex()
                 return;
             case Qt.Key_PageUp:
-                resultsList.currentIndex - maxProposals < 0
+                resultsList.currentIndex - max_items < 0
                         ? resultsList.currentIndex = 0
-                        : resultsList.currentIndex -= maxProposals
+                        : resultsList.currentIndex -= max_items
                 return;
             case Qt.Key_PageDown:
-                resultsList.currentIndex + maxProposals > resultsList.count
+                resultsList.currentIndex + max_items > resultsList.count
                         ? resultsList.currentIndex = resultsList.count-1
-                        : resultsList.currentIndex += maxProposals
+                        : resultsList.currentIndex += max_items
                 return;
         }
         event.ignore
     }
 
-    Component.onCompleted: setPreset("Mono")
+    Component.onCompleted: setPreset("Default")
 
 
     function availableProperties() {
-        return ["background_color","foreground_color","highlight_color",
-                "frame_color","space","maxProposals"];
+        return ["background_color",
+                "foreground_color",
+                "highlight_color",
+                "frame_color",
+                "input_fontsize",
+                "item_title_fontsize",
+                "item_description_fontsize",
+                "item_height",
+                "max_items",
+                "space",
+                "settingsbutton_size",
+                "window_width"];
     }
     function availablePresets() {
-        return ["Mono", "Orange","Magenta","Mint","Green","Blue","Violet"];
+        return ["Default","Orange","Magenta","Mint","Green","Blue","Violet"];
     }
     function setPreset(p) {
         switch (p) {
-        case "Mono":
-            background_color= "#444"
-            foreground_color= "#AAA"
-            highlight_color= "#FFF"
-            frame_color= "#80808080"
-            space= 7
-            maxProposals= 5
+        case "Default":
+            background_color = "#444"
+            foreground_color = "#BBB"
+            highlight_color = "#FFF"
+            frame_color = "#80808080"
+            input_fontsize = 36
+            item_title_fontsize = 26
+            item_description_fontsize = 12
+            item_height = 48
+            max_items = 5
+            space = 7
+            settingsbutton_size = 13
+            window_width = 720
             break;
         case "Orange":
-            setPreset("Mono")
+            setPreset("Default")
             highlight_color= "#FFA040"
             frame_color= "#80FFA040"
             break;
         case "Magenta":
-            setPreset("Mono")
+            setPreset("Default")
             highlight_color= "#FF40A0"
             frame_color= "#80FF40A0"
             break;
         case "Mint":
-            setPreset("Mono")
+            setPreset("Default")
             highlight_color= "#40FFA0"
             frame_color= "#8040FFA0"
             break;
         case "Green":
-            setPreset("Mono")
+            setPreset("Default")
             highlight_color= "#A0FF40"
             frame_color= "#80A0FF40"
             break;
         case "Blue":
-            setPreset("Mono")
+            setPreset("Default")
             highlight_color= "#40A0FF"
             frame_color= "#8040A0FF"
             break;
         case "Violet":
-            setPreset("Mono")
+            setPreset("Default")
             highlight_color= "#A040FF"
             frame_color= "#80A040FF"
             break;
@@ -331,8 +350,11 @@ FocusScope {
      * Listeners on signal: 'indexActivated'
      * Listeners on signal: 'queryChanged'
      * Listeners on signal: 'settingsWindowRequested'
-     * External mutations of the property maxProposals
      * External invokation of 'onMainWindowVisibleChanged' (Focus out)
+     * External invokation of availablePresets
+     * External invokation of setPreset
+     * External invokation of availableProperties
+     * External mutations of the properties returned by availableProperties
      *
      * Canges to this interface will increment the minor version of the
      * interface version, if the new interface is a superset of the last one,
