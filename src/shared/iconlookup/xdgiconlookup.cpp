@@ -133,7 +133,6 @@ QString XdgIconLookup::lookupThemeFile(const QString &themeName)
 }
 
 
-
 /** ***************************************************************************/
 QString XdgIconLookup::themeIcon(QString iconName){
 
@@ -192,6 +191,17 @@ QString XdgIconLookup::themeIconHelper(const QString &iconName, const QString &t
         if (!iconPath.isNull())
             return iconPath;
     }
+
+    // Now search unsorted
+    for (const QString &iconDir : iconDirs_){
+        for (const QString &ext : icon_extensions){
+            QString filename = QString("%1/%2.%3").arg(iconDir, iconName, ext);
+            if (QFile(filename).exists()){
+                return filename;
+            }
+        }
+    }
+
     return QString();
 }
 
@@ -227,15 +237,6 @@ QString XdgIconLookup::lookupIconInTheme(const QString &iconName, const QString 
         }
     }
 
-    // Now search unsorted
-    for (const QString &iconDir : iconDirs_){
-        for (const QString &ext : icon_extensions){
-            QString filename = QString("%1/%2.%3").arg(iconDir, iconName, ext);
-            if (QFile(filename).exists()){
-                return filename;
-            }
-        }
-    }
     return QString();
 }
 
