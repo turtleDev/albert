@@ -29,26 +29,23 @@
 #include "bookmark.h"
 #include "query.h"
 
-
-const QString ChromeBookmarks::Extension::EXT_NAME       = "chromebookmarks";
-const QString ChromeBookmarks::Extension::CFG_BOOKMARKS  = "bookmarkfile";
-const QString ChromeBookmarks::Extension::CFG_FUZZY      = "fuzzy";
-const bool    ChromeBookmarks::Extension::DEF_FUZZY      = false;
-
+const char* ChromeBookmarks::Extension::CFG_BOOKMARKS  = "bookmarkfile";
+const char* ChromeBookmarks::Extension::CFG_FUZZY      = "fuzzy";
+const bool  ChromeBookmarks::Extension::DEF_FUZZY      = false;
 
 /** ***************************************************************************/
-ChromeBookmarks::Extension::Extension() {
-    qDebug() << "[ChromeBookmarks] Initialize extension";
+ChromeBookmarks::Extension::Extension() : IExtension("Chromebookmarks") {
+    qDebug("[%s] Initialize extension", name);
 
     // Load settings
     QSettings s;
-    s.beginGroup(EXT_NAME);
+    s.beginGroup(name);
     searchIndex_.setFuzzy(s.value(CFG_FUZZY, DEF_FUZZY).toBool());
 
     // Deserialize data
     QFile dataFile(
                 QDir(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).
-                filePath(QString("%1.dat").arg(EXT_NAME))
+                filePath(QString("%1.dat").arg(name))
                 );
     if (dataFile.exists()) {
         if (dataFile.open(QIODevice::ReadOnly| QIODevice::Text)) {
@@ -77,14 +74,14 @@ ChromeBookmarks::Extension::Extension() {
     // Keep in sync with the bookmarkfile
     connect(&watcher_, &QFileSystemWatcher::fileChanged, this, &Extension::updateIndex);
 
-    qDebug() << "[ChromeBookmarks] Extension initialized";
+    qDebug("[%s] Extension initialized", name);
 }
 
 
 
 /** ***************************************************************************/
 ChromeBookmarks::Extension::~Extension() {
-    qDebug() << "[ChromeBookmarks] Finalize extension";
+    qDebug("[%s] Finalize extension", name);
 
     // Stop and wait for background indexer
     if (!indexer_.isNull()) {
@@ -97,14 +94,14 @@ ChromeBookmarks::Extension::~Extension() {
 
     // Save settings
     QSettings s;
-    s.beginGroup(EXT_NAME);
+    s.beginGroup(name);
     s.setValue(CFG_FUZZY, searchIndex_.fuzzy());
     s.setValue(CFG_BOOKMARKS, bookmarksFile_);
 
     // Serialize data
     QFile dataFile(
                 QDir(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).
-                filePath(QString("%1.dat").arg(EXT_NAME))
+                filePath(QString("%1.dat").arg(name))
                 );
     if (dataFile.open(QIODevice::ReadWrite| QIODevice::Text)) {
         qDebug() << "[ChromeBookmarks] Serializing to" << dataFile.fileName();
@@ -122,7 +119,7 @@ ChromeBookmarks::Extension::~Extension() {
     } else
         qCritical() << "Could not write to " << dataFile.fileName();
 
-    qDebug() << "[ChromeBookmarks] Extension finalized";
+    qDebug("[%s] Extension finalized", name);
 }
 
 

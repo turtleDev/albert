@@ -22,11 +22,10 @@
 #include "objects.hpp"
 #include "iconlookup/xdgiconlookup.h"
 
-
-
 /** ***************************************************************************/
-Calculator::Extension::Extension() {
-    qDebug() << "[Calculator] Initialize extension";
+Calculator::Extension::Extension() : IExtension("Calculator") {
+    qDebug("[%s] Initialize extension", name);
+
     XdgIconLookup xdg;
     QString iconPath = xdg.themeIcon("calc");
     iconUrl_ = iconPath.isNull()
@@ -35,14 +34,17 @@ Calculator::Extension::Extension() {
     parser_.reset(new mu::Parser);
     parser_->SetDecSep(loc.decimalPoint().toLatin1());
     parser_->SetThousandsSep(loc.groupSeparator().toLatin1());
-    qDebug() << "[Calculator] Extension initialized";
+
+    qDebug("[%s] Extension initialized", name);
 }
 
 
 
 /** ***************************************************************************/
 Calculator::Extension::~Extension() {
+    qDebug("[%s] Finalize extension", name);
     parser_.reset();
+    qDebug("[%s] Extension finalized", name);
 }
 
 
