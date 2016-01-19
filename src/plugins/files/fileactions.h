@@ -18,9 +18,6 @@
 #include <QDesktopServices>
 #include <QClipboard>
 #include <QMimeData>
-#include <QIcon>
-#include <QUrl>
-#include <QStyle>
 #include "albertapp.h"
 #include "file.h"
 
@@ -49,7 +46,7 @@ public:
         return "Open file in default application";
     }
 
-    QIcon icon() const override {
+    QUrl icon() const override {
         return file_->icon();
     }
 
@@ -72,8 +69,8 @@ public:
         return "Reveal file in default filebrowser";
     }
 
-    QIcon icon() const override {
-        return QApplication::style()->standardIcon(QStyle::SP_DirIcon);
+    QUrl icon() const override {
+        return QUrl();// FIXME QApplication::style()->standardIcon(QStyle::SP_DirIcon);
     }
 
     void activate() override {
@@ -95,8 +92,8 @@ public:
         return "Copy file to clipboard";
     }
 
-    QIcon icon() const override {
-        return QIcon::fromTheme("edit-copy");
+    QUrl icon() const override {
+        return QUrl(); //  FIXME QIcon::fromTheme("edit-copy");
     }
 
     void activate() override {
@@ -142,8 +139,8 @@ public:
         return "Copy path to clipboard";
     }
 
-    QIcon icon() const override {
-        return QIcon::fromTheme("edit-copy");
+    QUrl icon() const override {
+        return QUrl();// FIXME QIcon::fromTheme("edit-copy");
     }
 
     void activate() override {

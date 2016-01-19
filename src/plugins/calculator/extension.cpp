@@ -20,16 +20,18 @@
 #include "extension.h"
 #include "query.h"
 #include "objects.hpp"
+#include "iconlookup/xdgiconlookup.h"
 
 
 
 /** ***************************************************************************/
 Calculator::Extension::Extension() {
     qDebug() << "[Calculator] Initialize extension";
-    if (QIcon::hasThemeIcon("calc"))
-        calcIcon_ = QIcon::fromTheme("calc");
-    else
-        calcIcon_ = QIcon::fromTheme("unknown");  // FIXME FAVICON RESOURCE
+    XdgIconLookup xdg;
+    QString iconPath = xdg.themeIcon("calc");
+    iconUrl_ = iconPath.isNull()
+            ? QUrl("qrc:calc")
+            : QUrl::fromLocalFile(iconPath);
     parser_.reset(new mu::Parser);
     parser_->SetDecSep(loc.decimalPoint().toLatin1());
     parser_->SetThousandsSep(loc.groupSeparator().toLatin1());
@@ -59,7 +61,7 @@ void Calculator::Extension::handleQuery(shared_ptr<Query> query) {
     std::shared_ptr<StandardItem> calcItem = std::make_shared<StandardItem>();
     calcItem->setText(result);
     calcItem->setSubtext(QString("Result of '%1'").arg(query->searchTerm()));
-    calcItem->setIcon(calcIcon_);
+    calcItem->setIcon(iconUrl_);
     calcItem->setAction([result](){
         QApplication::clipboard()->setText(result);
         qApp->hideMainWindow();

@@ -22,8 +22,8 @@
 
 
 /** ***************************************************************************/
-Websearch::SearchEngine::SearchEngine(QString name, QString url, QString trigger, QString iconPath, bool enabled)
-    : enabled_(enabled), name_(name), url_(url), trigger_(trigger), iconPath_(iconPath), icon_(QIcon(iconPath_)) {
+Websearch::SearchEngine::SearchEngine(QString name, QString url, QString trigger, QUrl iconUrl, bool enabled)
+    : enabled_(enabled), name_(name), url_(url), trigger_(trigger), iconUrl_(iconUrl) {
 
 }
 
@@ -44,8 +44,8 @@ QString Websearch::SearchEngine::subtext() const {
 
 
 /** ***************************************************************************/
-QIcon Websearch::SearchEngine::icon() const {
-    return icon_;
+QUrl Websearch::SearchEngine::icon() const {
+    return iconUrl_;
 }
 
 
@@ -64,7 +64,7 @@ void Websearch::SearchEngine::serialize(QDataStream &out) {
         << url_
         << name_
         << trigger_
-        << iconPath_;
+        << iconUrl_;
 }
 
 
@@ -75,6 +75,5 @@ void Websearch::SearchEngine::deserialize(QDataStream &in) {
        >> url_
        >> name_
        >> trigger_
-       >> iconPath_;
-    icon_ = QIcon(iconPath_);
+       >> iconUrl_;
 }

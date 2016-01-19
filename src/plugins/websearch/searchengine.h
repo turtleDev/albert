@@ -24,11 +24,11 @@ class SearchEngine final : public AlbertItem
 {
 public:
     SearchEngine() : enabled_(false) {}
-    SearchEngine(QString name, QString url, QString trigger, QString iconPath, bool enabled = true);
+    SearchEngine(QString name, QString url, QString trigger, QUrl iconUrl, bool enabled = true);
 
     QString text() const override;
     QString subtext() const override;
-    QIcon icon() const override;
+    QUrl icon() const override;
     void activate() override;
 
     void serialize(QDataStream &out);
@@ -56,8 +56,7 @@ private:
     QString url_;
     QString trigger_;
     QString searchTerm_;
-    QString iconPath_;
-    QIcon   icon_;
+    QUrl    iconUrl_;
 };
 
 }

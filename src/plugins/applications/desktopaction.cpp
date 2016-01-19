@@ -21,10 +21,10 @@
 
 
 /** ***************************************************************************/
-Applications::DesktopAction::DesktopAction(Application *app, const QString &name, const QString &exec, const QIcon &icon, const bool term)
-    : app_(app), name_(name), exec_(exec), icon_(icon), term_(term) {
-
-}
+Applications::DesktopAction::DesktopAction(Application *app, const QString &name,
+                                           const QString &exec, const QUrl &iconUrl,
+                                           const bool term)
+    : app_(app), name_(name), exec_(exec), iconUrl_(iconUrl), term_(term) {}
 
 
 
@@ -43,8 +43,8 @@ QString Applications::DesktopAction::subtext() const {
 
 
 /** ***************************************************************************/
-QIcon Applications::DesktopAction::icon() const {
-    return icon_;
+QUrl Applications::DesktopAction::icon() const {
+    return iconUrl_;
 }
 
 

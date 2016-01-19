@@ -144,12 +144,12 @@ void Websearch::Extension::restoreDefaults() {
     index_.clear();
 
     beginResetModel();
-    index_.push_back(std::make_shared<SearchEngine>("Google", "https://www.google.com/#q=%s", "gg", ":google"));
-    index_.push_back(std::make_shared<SearchEngine>("Youtube", "https://www.youtube.com/results?search_query=%s", "yt", ":youtube"));
-    index_.push_back(std::make_shared<SearchEngine>("Amazon", "http://www.amazon.com/s/?field-keywords=%s", "ama", ":amazon"));
-    index_.push_back(std::make_shared<SearchEngine>("Ebay", "http://www.ebay.com/sch/i.html?_nkw=%s", "eb", ":ebay"));
-    index_.push_back(std::make_shared<SearchEngine>("GitHub", "https://github.com/search?utf8=✓&q=%s", "gh", ":github"));
-    index_.push_back(std::make_shared<SearchEngine>("Wolfram Alpha", "https://www.wolframalpha.com/input/?i=%s", "=", ":wolfram"));
+    index_.push_back(std::make_shared<SearchEngine>("Google", "https://www.google.com/#q=%s", "gg", QUrl("qrc:google")));
+    index_.push_back(std::make_shared<SearchEngine>("Youtube", "https://www.youtube.com/results?search_query=%s", "yt", QUrl("qrc:youtube")));
+    index_.push_back(std::make_shared<SearchEngine>("Amazon", "http://www.amazon.com/s/?field-keywords=%s", "ama", QUrl("qrc:amazon")));
+    index_.push_back(std::make_shared<SearchEngine>("Ebay", "http://www.ebay.com/sch/i.html?_nkw=%s", "eb", QUrl("qrc:ebay")));
+    index_.push_back(std::make_shared<SearchEngine>("GitHub", "https://github.com/search?utf8=✓&q=%s", "gh", QUrl("qrc:github")));
+    index_.push_back(std::make_shared<SearchEngine>("Wolfram Alpha", "https://www.wolframalpha.com/input/?i=%s", "=", QUrl("qrc:wolfram")));
     endResetModel();
 }
 
@@ -338,9 +338,9 @@ bool Websearch::Extension::insertRows(int position, int rows, const QModelIndex 
         index_.insert(index_.begin() + row,
                       std::make_shared<SearchEngine>(
                           "<name>",
-                          "<http://url/containing/the/?searchexpression=%s>",
+                          "<http://url/containing/the/?query=%s>",
                           "<trigger>",
-                          ":default",
+                          QUrl("qrc:default"),
                           false));
     }
     endInsertRows();

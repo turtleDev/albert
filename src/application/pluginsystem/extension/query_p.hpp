@@ -16,7 +16,6 @@
 
 #pragma once
 #include <QDebug>
-#include <QIcon>
 #include <QVariant>
 #include <QMutex>
 #include <QTimer>

@@ -174,6 +174,7 @@ FocusScope {
                                 height: width
                                 smooth: true
                                 anchors.centerIn: parent
+                                fillMode: Image.PreserveAspectFit
                             }
 //                            Rectangle {
 //                                width: parent.height-2

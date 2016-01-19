@@ -17,7 +17,7 @@
 #pragma once
 #include <QObject>
 #include <QPointer>
-#include <QIcon>
+#include <QUrl>
 #include <vector>
 #include "iextension.h"
 using std::vector;
@@ -38,7 +38,7 @@ class Extension final : public QObject, public IExtension
         QString id; // lowercase name in most cases
         QString name;
         QString desc;
-        QIcon   icon;
+        QUrl    icon;
         QString cmd;
     };
 

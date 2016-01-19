@@ -77,9 +77,6 @@ ChromeBookmarks::Extension::Extension() {
     // Keep in sync with the bookmarkfile
     connect(&watcher_, &QFileSystemWatcher::fileChanged, this, &Extension::updateIndex);
 
-    // Get a generic favicon
-    Bookmark::icon_ = QIcon::fromTheme("favorites", QIcon(":favicon"));
-
     qDebug() << "[ChromeBookmarks] Extension initialized";
 }
 

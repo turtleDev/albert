@@ -15,10 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
-#include <QString>
-#include <QIcon>
 #include "abstractobjects.hpp"
-
 
 namespace ChromeBookmarks {
 
@@ -35,7 +32,7 @@ public:
 
     QString text() const override;
     QString subtext() const override;
-    QIcon icon() const override;
+    QUrl icon() const override;
     void activate() override;
 
     uint16_t usageCount() const override {return usage_;}
@@ -47,6 +44,5 @@ private:
     QString      name_;
     QString      url_;
     ushort       usage_;
-    static QIcon icon_;
 };
 }

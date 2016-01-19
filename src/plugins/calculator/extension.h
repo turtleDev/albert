@@ -17,7 +17,7 @@
 #pragma once
 #include <QObject>
 #include <QLocale>
-#include <QIcon>
+#include <QUrl>
 #include <memory>
 #include "iextension.h"
 #include "muParser.h"
@@ -42,7 +42,6 @@ public:
 private:
     std::unique_ptr<mu::Parser> parser_;
     QLocale loc;
-    QIcon calcIcon_;
-
+    QUrl iconUrl_;
 };
 }

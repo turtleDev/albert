@@ -3,7 +3,7 @@ set(LIB_NAME calculator)
 find_package(Qt5Widgets 5.1 REQUIRED)
 
 include_directories(
-    ../../application/ #TODO replace by coreapi
+    ../../application/
     ../../shared
     ../../application/pluginsystem/extension
 )
@@ -11,6 +11,11 @@ include_directories(
 set(SRC
     metadata.json
     extension.cpp
+    ../../shared/iconlookup/xdgiconlookup.cpp
+)
+
+qt5_add_resources(QRC
+    ${LIB_NAME}.qrc
 )
 
 add_library(${LIB_NAME} SHARED ${SRC})

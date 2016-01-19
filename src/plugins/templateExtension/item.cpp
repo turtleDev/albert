@@ -46,9 +46,9 @@ QString Template::Item::subtext() const {
 
 
 /** ***************************************************************************/
-QIcon Template::Item::icon() const {
+QUrl Template::Item::icon() const {
     // Icon of item
-    return QIcon();
+    return QUrl();
 }
 
 

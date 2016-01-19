@@ -15,12 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <QDesktopServices>
-#include <QUrl>
 #include "bookmark.h"
 #include "albertapp.h"
-
-
-QIcon ChromeBookmarks::Bookmark::icon_;
 
 
 /** ***************************************************************************/
@@ -38,8 +34,8 @@ QString ChromeBookmarks::Bookmark::subtext() const {
 
 
 /** ***************************************************************************/
-QIcon ChromeBookmarks::Bookmark::icon() const {
-    return icon_;
+QUrl ChromeBookmarks::Bookmark::icon() const {
+    return QUrl("qrc:favicon");
 }
 
 

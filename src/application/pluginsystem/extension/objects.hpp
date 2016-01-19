@@ -23,8 +23,8 @@ class StandardItem final : public AlbertItem
 {
 public:
     StandardItem(){}
-    StandardItem(const QString &text, const QString &subtext, const QIcon &icon, std::function<void()> f)
-        : text_(text), subtext_(subtext), icon_(icon), action_(f) {}
+    StandardItem(const QString &text, const QString &subtext, const QUrl &iconUrl, std::function<void()> f)
+        : text_(text), subtext_(subtext), iconUrl_(iconUrl), action_(f) {}
 
     QString text() const override { return text_; }
     void setText(const QString &text){text_ = text;}
@@ -32,8 +32,8 @@ public:
     QString subtext() const override { return subtext_; }
     void setSubtext(const QString &subtext){subtext_ = subtext;}
 
-    QIcon icon() const override { return icon_; }
-    void setIcon( const QIcon &icon){icon_ = icon;}
+    QUrl icon() const override { return iconUrl_; }
+    void setIcon( const QUrl &iconUrl){iconUrl_ = iconUrl;}
 
     std::function<void()> action() { return action_; }
     void setAction(std::function<void()> action){ action_ = std::move(action);}
@@ -42,7 +42,7 @@ public:
 private:
     QString text_;
     QString subtext_;
-    QIcon icon_;
+    QUrl iconUrl_;
     function<void()> action_;
 };
 
