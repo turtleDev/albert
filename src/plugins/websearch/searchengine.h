@@ -49,6 +49,7 @@ public:
     const QString &url() const {return url_;}
     void setUrl(QString url) {url_ = url;}
 
+    void setIconUrl(const QUrl &url) {iconUrl_ = url;}
 
 private:
     bool    enabled_;
