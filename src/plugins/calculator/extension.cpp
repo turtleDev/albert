@@ -27,7 +27,7 @@ Calculator::Extension::Extension() : IExtension("Calculator") {
     qDebug("[%s] Initialize extension", name);
 
     XdgIconLookup xdg;
-    QString iconPath = xdg.themeIcon("calc");
+    QString iconPath = xdg.lookupIcon("calc");
     iconUrl_ = iconPath.isNull()
             ? QUrl("qrc:calc")
             : QUrl::fromLocalFile(iconPath);

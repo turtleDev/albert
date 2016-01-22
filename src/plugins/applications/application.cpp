@@ -168,13 +168,13 @@ bool Applications::Application::readDesktopEntry() {
     QString iconName;
     if (values["Desktop Entry"].count("Icon")){
         QString iconName = values["Desktop Entry"]["Icon"];
-        QString iconPath = xdg.themeIcon(iconName);
+        QString iconPath = xdg.lookupIcon(iconName);
         if (!iconPath.isNull())
             iconUrl_ = QUrl::fromLocalFile(iconPath);
         else
             qWarning() << iconName << "was not found";
     } else {
-        QString iconPath = xdg.themeIcon("exec");
+        QString iconPath = xdg.lookupIcon("exec");
         if (!iconPath.isNull())
             iconUrl_ = QUrl::fromLocalFile(iconPath);
         else
@@ -236,7 +236,7 @@ bool Applications::Application::readDesktopEntry() {
             group = QString("Desktop Action %1").arg(actionString);
             if (values[group].count("Icon")){
                 QString iconName = values[group]["Icon"];
-                QString iconPath = xdg.themeIcon(iconName);
+                QString iconPath = xdg.lookupIcon(iconName);
                 if (!iconPath.isNull()){
                     actions_.push_back(std::make_shared<DesktopAction>(this, name, exec, QUrl::fromLocalFile(iconPath)));
                     break;

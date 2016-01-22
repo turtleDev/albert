@@ -99,7 +99,6 @@ public:
 /** ***************************************************************************/
 
 QStringList XdgIconLookup::iconDirs_;
-QMap<QString, QString> XdgIconLookup::iconCache_;
 QStringList XdgIconLookup::icon_extensions = {"png", "svg", "xpm"};
 
 /** ***************************************************************************/
@@ -109,12 +108,20 @@ XdgIconLookup::XdgIconLookup()
     apps should look in $HOME/.icons (for backwards compatibility), in
     $XDG_DATA_DIRS/icons and in /usr/share/pixmaps (in that order). */
 
+    QString path;
     if (iconDirs_.isEmpty()){
-        iconDirs_.append("~/.icons");
+        path = "~/.icons";
+        if (QFile::exists(path))
+            iconDirs_.append(path);
         for (const QString &basedir
-             : QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation))
-            iconDirs_.append(QDir(basedir).filePath("icons"));
-        iconDirs_.append("/usr/share/pixmaps");
+             : QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation)){
+            path = QDir(basedir).filePath("icons");
+            if (QFile::exists(path))
+                iconDirs_.append(path);
+        }
+        path = "/usr/share/pixmaps";
+        if (QFile::exists(path))
+            iconDirs_.append(path);
     }
 }
 
@@ -134,7 +141,7 @@ QString XdgIconLookup::lookupThemeFile(const QString &themeName)
 
 
 /** ***************************************************************************/
-QString XdgIconLookup::themeIcon(QString iconName){
+QString XdgIconLookup::lookupIcon(QString iconName){
 
     // if we have an absolute path, just return it
     if (iconName[0]=='/')
@@ -145,34 +152,24 @@ QString XdgIconLookup::themeIcon(QString iconName){
         if (iconName.endsWith(QString(".").append(ext)))
             iconName.chop(4);
 
-    // Check cache
-    QString iconPath = iconCache_.value(iconName);
+    // Lookup themefile
+    QString iconPath = lookupIconHelper(iconName, QIcon::themeName());
     if (!iconPath.isNull())
         return iconPath;
 
-    // Lookup themefile
-    iconPath = themeIconHelper(iconName, QIcon::themeName());
-    if (!iconPath.isNull()){
-        iconCache_.insert(iconName, iconPath);
-        return iconPath;
-    }
-
     // Lookup in hicolor
-    iconPath = themeIconHelper(iconName, "hicolor");
-    if (!iconPath.isNull()){
-        iconCache_.insert(iconName, iconPath);
+    iconPath = lookupIconHelper(iconName, "hicolor");
+    if (!iconPath.isNull())
         return iconPath;
-    }
 
     // Fallback
-//    return lookupIconInTheme("unkown", "hicolor");
     return QString();
 }
 
 
 
 /** ***************************************************************************/
-QString XdgIconLookup::themeIconHelper(const QString &iconName, const QString &themeName){
+QString XdgIconLookup::lookupIconHelper(const QString &iconName, const QString &themeName){
     QString iconPath;
 
     // Check if theme exists
@@ -187,7 +184,7 @@ QString XdgIconLookup::themeIconHelper(const QString &iconName, const QString &t
 
     // Check its parents too
     for (const QString &parent : ThemeFileParser(themeFile).inherits()){
-        iconPath = themeIconHelper(iconName, parent);
+        iconPath = lookupIconHelper(iconName, parent);
         if (!iconPath.isNull())
             return iconPath;
     }

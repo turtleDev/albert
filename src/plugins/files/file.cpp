@@ -20,6 +20,7 @@
 #include "fileactions.h"
 #include "iconlookup/xdgiconlookup.h"
 
+map<QString, QUrl> Files::File::iconCache_;
 
 /** ***************************************************************************/
 Files::File::File(QString path, QMimeType mimetype, short usage)
@@ -44,18 +45,29 @@ QString Files::File::subtext() const {
 /** ***************************************************************************/
 QUrl Files::File::icon() const {
     XdgIconLookup xdg;
+    QString iconPath;
 
-    QString iconPath = xdg.themeIcon(mimetype_.iconName());
-    if (!iconPath.isNull())
+    QString iconName = mimetype_.iconName();
+    if (iconCache_.count(iconName))
+        return iconCache_[iconName];
+    iconPath = xdg.lookupIcon(iconName);
+    if (!iconPath.isNull()){
+        iconCache_.emplace(iconName, QUrl::fromLocalFile(iconPath));
         return QUrl::fromLocalFile(iconPath);
+    }
 
-    iconPath = xdg.themeIcon(mimetype_.genericIconName());
-    if (!iconPath.isNull())
+    QString genericIconName = mimetype_.genericIconName();
+    iconPath = xdg.lookupIcon(genericIconName);
+    if (!iconPath.isNull()){
+        iconCache_.emplace(iconName, QUrl::fromLocalFile(iconPath)); // Intended
         return QUrl::fromLocalFile(iconPath);
+    }
 
-    iconPath = xdg.themeIcon("unknown");
-    if (!iconPath.isNull())
+    iconPath = xdg.lookupIcon("unknown");
+    if (!iconPath.isNull()){
+        iconCache_.emplace(iconName, QUrl::fromLocalFile(iconPath)); // Intended
         return QUrl::fromLocalFile(iconPath);
+    }
 
     return QUrl();
 }
@@ -68,6 +80,7 @@ void Files::File::activate() {
     // Standard action for a file
     OpenFileAction(this).activate();
 }
+
 
 
 /** ***************************************************************************/
@@ -94,4 +107,12 @@ vector<shared_ptr<AlbertItem>> Files::File::children() {
 /** ***************************************************************************/
 std::vector<QString> Files::File::aliases() const {
     return std::vector<QString>({QFileInfo(path_).fileName()});
+}
+
+
+
+
+/** ***************************************************************************/
+void Files::File::clearIconCache() {
+    iconCache_.clear();
 }

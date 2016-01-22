@@ -22,14 +22,13 @@ class XdgIconLookup
 {
 public:
     XdgIconLookup();
-    QString themeIcon(QString iconName);
+    QString lookupIcon(QString iconName);
 
 private:
-    static QString themeIconHelper(const QString &iconName, const QString &theme);
+    static QString lookupIconHelper(const QString &iconName, const QString &theme);
     static QString lookupIconInTheme(const QString &iconName, const QString &themeFile);
     static QString lookupThemeFile(const QString &themeName);
 
     static QStringList iconDirs_;
-    static QMap<QString, QString> iconCache_;
     static QStringList icon_extensions;
 };

@@ -17,9 +17,11 @@
 #pragma once
 #include <QMimeType>
 #include <vector>
+#include <map>
 #include <memory>
 #include "abstractobjects.hpp"
 using std::vector;
+using std::map;
 using std::shared_ptr;
 using std::unique_ptr;
 
@@ -49,11 +51,14 @@ public:
     const QMimeType &mimetype() const { return mimetype_; }
     void incUsage() {++usage_;}
 
+    static void clearIconCache();
+
 private:
     QString path_;
     QMimeType mimetype_;
     mutable short usage_;
     unique_ptr<vector<shared_ptr<AlbertItem>>> children_;
+    static map<QString, QUrl> iconCache_;
 };
 
 }

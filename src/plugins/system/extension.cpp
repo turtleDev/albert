@@ -45,35 +45,35 @@ System::Extension::Extension() : IExtension("System") {
     QString iconPath;
     s.beginGroup(name);
 
-    iconPath = xdg.themeIcon("system-shutdown");
+    iconPath = xdg.lookupIcon("system-shutdown");
     actions_.push_back({CFG_POWEROFF,
                         "Poweroff",
                         "Poweroff the machine.",
                         iconPath.isNull() ? QUrl("qrc:poweroff") : QUrl::fromLocalFile(iconPath),
                         s.value(CFG_POWEROFF, DEF_POWEROFF).toString()});
 
-    iconPath = xdg.themeIcon("system-reboot");
+    iconPath = xdg.lookupIcon("system-reboot");
     actions_.push_back({CFG_REBOOT,
                         "Reboot",
                         "Reboot the machine.",
                         iconPath.isNull() ? QUrl("qrc:reboot") : QUrl::fromLocalFile(iconPath),
                         s.value(CFG_REBOOT, DEF_REBOOT).toString()});
 
-    iconPath = xdg.themeIcon("system-suspend");
+    iconPath = xdg.lookupIcon("system-suspend");
     actions_.push_back({CFG_SUSPEND,
                         "Suspend",
                         "Suspend the machine.",
                         iconPath.isNull() ? QUrl("qrc:suspend") : QUrl::fromLocalFile(iconPath),
                         s.value(CFG_SUSPEND, DEF_SUSPEND).toString()});
 
-    iconPath = xdg.themeIcon("system-suspend-hibernate");
+    iconPath = xdg.lookupIcon("system-suspend-hibernate");
     actions_.push_back({CFG_HIBERNATE,
                         "Hiberate",
                         "Hiberate the machine.",
                         iconPath.isNull() ? QUrl("qrc:hibernate") : QUrl::fromLocalFile(iconPath),
                         s.value(CFG_HIBERNATE, DEF_HIBERNATE).toString()});
 
-    iconPath = xdg.themeIcon("system-lock");
+    iconPath = xdg.lookupIcon("system-lock");
     actions_.push_back({CFG_LOCK,
                         "Lock",
                         "Lock the session.",
