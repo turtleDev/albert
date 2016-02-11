@@ -20,22 +20,17 @@
 namespace Applications {
 class Application;
 
-class DesktopAction final : public AlbertItem
+class DesktopAction final : public Action
 {
 public:
-    DesktopAction(Application *app, const QString &name, const QString &exec,
-                  const QUrl &iconUrl, const bool term=false);
-
+    DesktopAction(Application *app, const QString &name, const QString &exec, const bool term=false);
     QString text() const override;
-    QString subtext() const override;
-    QUrl    icon() const override;
     void    activate() override;
 
 private:
     Application * const app_;
-    const QString name_;
+    const QString description_;
     const QString exec_;
-    const QUrl    iconUrl_;
     const bool    term_;
 };
 

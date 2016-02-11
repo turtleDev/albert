@@ -69,7 +69,6 @@ protected:
     QIdentityProxyModel model_;
 
 signals:
-    void queryChanged(const QString&);
-    void indexActivated(int);
+    void startQuery(QString qry, bool mode);
     void settingsWindowRequested();
 };

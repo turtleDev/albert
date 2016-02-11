@@ -50,6 +50,7 @@ MainWindow::MainWindow(QWindow *parent)
     // Set qml environment
     rootContext()->setContextProperty("history", &history_);
     rootContext()->setContextProperty("resultsModel", &model_);
+    rootContext()->setContextProperty("qApp", qApp);
 
     // Load settings
     QSettings s;
@@ -93,6 +94,7 @@ void MainWindow::show() {
 /** ***************************************************************************/
 void MainWindow::hide() {
     QQuickView::hide();
+    QMetaObject::invokeMethod(rootObject(), "onMainWindowHidden");
 }
 
 
@@ -128,10 +130,7 @@ void MainWindow::setSource(const QUrl &url) {
 
         // Connect the sigals
         QObject *object = rootObject();
-        connect(object, SIGNAL(queryChanged(QString)), this, SIGNAL(queryChanged(const QString&)));
-        connect(object, SIGNAL(indexActivated(int)), this, SIGNAL(indexActivated(int)));
-        connect(object, SIGNAL(settingsWindowRequested()), this, SIGNAL(settingsWindowRequested()));
-        connect(this, SIGNAL(visibleChanged(bool)), object, SLOT(onMainWindowVisibleChanged()));
+        connect(object, SIGNAL(startQuery(QString, bool)), this, SIGNAL(startQuery(QString, bool)));
 
         // Load the theme properties
         themeProperties.beginGroup(source().toEncoded());
@@ -202,16 +201,15 @@ bool MainWindow::event(QEvent *event) {
     // Quit on Alt+F4
     case QEvent::Close:
             qApp->quit();
-        break;
+        return true;
 
     // Hide window on escape key
     case QEvent::KeyPress:
         if ( static_cast<QKeyEvent*>(event)->modifiers() == Qt::NoModifier
-             && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape )
+             && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape ){
             hide();
-        else if ( static_cast<QKeyEvent*>(event)->modifiers() == Qt::AltModifier
-                  && static_cast<QKeyEvent*>(event)->key() == Qt::Key_F4 )
-            qApp->quit();
+            return true;
+        }
         break;
 
     case QEvent::FocusOut:

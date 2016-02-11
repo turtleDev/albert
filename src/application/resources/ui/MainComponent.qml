@@ -11,12 +11,14 @@ FocusScope {
     property int settingsbutton_size
     property int input_fontsize
     property int item_height
+    property int icon_size
     property int item_title_fontsize
     property int item_description_fontsize
     property int max_items
     property int space
     property int window_width
     // ▲▼ Settable properties of this style ▼▲
+    property int currentModifiers
 
     width: frame.width
     height: frame.height
@@ -33,10 +35,7 @@ FocusScope {
 
         Column {
             id: content
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.left: parent.left
-            anchors.margins: space*2
+            anchors { top: parent.top; left: parent.left; right: parent.right; margins: space*2}
             spacing: space
 
             Rectangle {
@@ -49,17 +48,22 @@ FocusScope {
                 HistoryTextInput {
                     id: historyTextInput
                     clip: true
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.margins: 4
-                    echoMode: TextInput.Normal
-                    font.family: "DejaVu Sans"
+                    anchors { left: parent.left; right: parent.right; margins: 4 }
                     font.pixelSize: input_fontsize
                     color: foreground_color
                     selectedTextColor: background_color
                     selectionColor: highlight_color
                     selectByMouse: true
                     focus: true
+                    Keys.forwardTo: resultsList
+                    onTextChanged: { startQuery(text, false) }
+                    Connections {
+                        target: resultsList
+                        onItemActivated: {
+                            historyTextInput.pushTextToHistory()
+                            historyTextInput.clearLine()
+                        }
+                    }
                     cursorDelegate : Component {
                         Item {
                             id: cursor
@@ -70,56 +74,49 @@ FocusScope {
                             }
                             SequentialAnimation on opacity {
                                 loops: Animation.Infinite;
-                                NumberAnimation { to: 0; duration: 1000; easing.type: Easing.InOutCubic}
+                                NumberAnimation { to: 0.2; duration: 1000; easing.type: Easing.InOutCubic}
                                 NumberAnimation { to: 1; duration: 1000; easing.type: Easing.InOutCubic}
                             }
                         }
                     }
-                    onTextChanged: {
-                        queryChanged(text)
-                        resultsList.currentIndex = -1;
-                    }
-                    onAccepted: {
-                        // Ignore empty list
-                        if (resultsList.count === 0)
-                            return
-                        // Activate selected item, first if none is selected
-                        indexActivated(resultsList.currentIndex===-1?0:resultsList.currentIndex)
-                    }
-
-                    // Workaround (Shortcuts are 5.5 only)
                     Keys.onPressed: {
-                        if (event.key===Qt.Key_Comma && event.modifiers===Qt.AltModifier)
-                            settingsWindowRequested()
+                        event.accepted = true
+                        if (event.key===Qt.Key_Tab){  // For selected or first item, if list is not empty, show details
+                            if (resultsList.count > 0) {
+                                if (resultsList.currentIndex < 0)
+                                    resultsList.currentIndex=0
+                                resultsList.state = (resultsList.state==="detailsView") ? "" : "detailsView";
+                            } else event.accepted = false
+                        } else if (event.key===Qt.Key_Comma && event.modifiers===Qt.AltModifier) {
+                            qApp.openSettingsWindow()
+                        } else
+                            event.accepted = false
                     }
-                }
+                } // historyTextInput
 
                 Item {
-                    id: settingsbutton
                     width: settingsbutton_size
-                    height: width
-                    anchors.top: parent.top
-                    anchors.right: parent.right
-                    anchors.topMargin: 3
-                    anchors.rightMargin: 3
-
-                    Image {
-                        id: gearmask
-                        anchors.fill: parent
-                        sourceSize: Qt.size(width, height)
-                        source: "../icons/gear.svg"
-                        smooth: true
-                        visible: false
-                    }
+                    height: settingsbutton_size
+                    anchors { top: parent.top;topMargin: 3;right: parent.right;rightMargin: 3 }
                     Rectangle {
                         id: gearcolor
-                        anchors.fill: parent
+                        width: settingsbutton_size
+                        height: settingsbutton_size
                         color: background_color
+                        visible: false
+                    }
+                    Image {
+                        id: gearmask
+                        source: "../icons/gear.svg"
+                        width: settingsbutton_size
+                        height: settingsbutton_size
+                        sourceSize{width: settingsbutton_size; height: settingsbutton_size}
+                        smooth: true
                         visible: false
                     }
                     OpacityMask {
                         id: gear
-                        anchors.fill: settingsbutton
+                        anchors.fill: parent
                         source: gearcolor
                         maskSource: gearmask
                         RotationAnimation on rotation {
@@ -133,14 +130,14 @@ FocusScope {
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
-                        onClicked: settingsWindowRequested()
+                        onClicked: qApp.openSettingsWindow()
                         onEntered: gearcolor.color=foreground_color
                         onExited: gearcolor.color=background_color
                         onPressed: gearcolor.color=highlight_color
                         onReleased: gearcolor.color=background_color
-                    }
-                }
-            }
+                    }  // gear
+                }  // settingsbutton
+            }  // historyTextInputFrame
 
             ListView {
                 id: resultsList
@@ -148,153 +145,278 @@ FocusScope {
                 height: Math.min(max_items, count)*(item_height+spacing)-spacing
                 model: resultsModel
                 snapMode: ListView.SnapToItem
-                boundsBehavior: Flickable.StopAtBounds
                 clip: true
-                delegate: listDelegate
-                highlightMoveDuration : 200
+                highlightMoveDuration : 250
                 highlightMoveVelocity : 1000
                 spacing: space
+                signal itemActivated()
 
-                Component {
-                    id: listDelegate
+                // Reset the state if the list content changes
+                Connections {target: resultsModel; onModelReset: {resultsList.state="";resultsList.currentIndex=-1} }
+
+                // Key handling
+                Keys.onPressed: {
+                    event.accepted = true
+                    if (event.key===Qt.Key_Up)  // Move up in list, or next from history if none selected or ctrl is hold
+                        (currentIndex===-1 || event.modifiers===Qt.ControlModifier) ? historyTextInput.nextIteration() : decrementCurrentIndex()
+                    else if (event.key===Qt.Key_Down)  // Move down in list, or prev from history if ctrl is hold
+                        (event.modifiers===Qt.ControlModifier) ? historyTextInput.prevIteration() : incrementCurrentIndex()
+                    else if (event.key===Qt.Key_PageUp)  // Move page up
+                        currentIndex = (currentIndex - max_items < 0) ? 0 : currentIndex - max_items
+                    else if (event.key===Qt.Key_PageDown)  // Move page down
+                        currentIndex = (currentIndex + max_items > count) ? count-1 : currentIndex + max_items
+                    else if ((event.key===Qt.Key_Enter || event.key===Qt.Key_Return) && count>0){  // Activate on accepted
+                        if (currentIndex===-1)
+                            currentIndex=0;
+                        currentItem.activate()
+                    } else if (event.key===Qt.Key_Shift || event.key===Qt.Key_Control || event.key===Qt.Key_Meta || event.key===Qt.Key_Alt) {  // Change text on mod
+                        if (event.key===Qt.Key_Alt && event.modifiers===Qt.AltModifier)  // Show fallbacks on alt
+                            startQuery(historyTextInput.text, true)
+                        currentModifiers=event.modifiers
+                    } else
+                        event.accepted = false
+                }
+                Keys.onReleased: {
+                    if (event.key===Qt.Key_Shift || event.key===Qt.Key_Control || event.key===Qt.Key_Meta || event.key===Qt.Key_Alt) {  // Change text on mod
+                        if (event.key===Qt.Key_Alt && event.modifiers!==Qt.AltModifier) // Show fallbacks on alt
+                            startQuery(historyTextInput.text, false)
+                        currentModifiers=event.modifiers
+                    }
+                }
+
+                // Definition of the actions view
+                states : State {
+                    name: "detailsView"
+                    PropertyChanges { target: resultsList; height: resultsList.currentItem.height }
+                    PropertyChanges { target: resultsList; explicit: true; contentY: currentItem.y }
+                    PropertyChanges { target: resultsList; interactive: false }
+                }
+
+                // Make state change visually smooth by fading list
+                Behavior on state {
+                    SequentialAnimation {
+                        PropertyAction { target: resultsList; property: "opacity"; value: 0 }
+                        PropertyAction { }
+                        NumberAnimation { target: resultsList; property: "opacity"; to: 1 }
+                    }
+                }
+
+//                transitions: Transition {
+//                    SequentialAnimation {
+//                        PropertyAction { target: resultsList; properties: "interactive" }
+//                        NumberAnimation { target: resultsList; property: "opacity"; to: 0 }
+//                        PropertyAction { target: resultsList.currentItem; properties: "state" }
+//                        PropertyAction { target: resultsList; property: "contentY" }
+//                        PropertyAction { target: resultsList; property: "height" }
+//                        NumberAnimation { target: resultsList; property: "opacity"; to: 1 }
+//                    }
+//                }
+
+                delegate: Component {
+                    id: listItemDelegate
                     Item {
                         id: listItem
-                        height: item_height
-                        width: resultsList.width
+                        width: parent.width
+                        height: listItemColumn.height
 
-                        Item {
-                            id: listItemIconArea
-                            width: parent.height
-                            height: parent.height
-
-                            Image {
-                                id: icon
-                                source: model.decoration
-                                width: parent.height
-                                height: width
-                                smooth: true
-                                anchors.centerIn: parent
-                                fillMode: Image.PreserveAspectFit
+                        // Definition of the actions view
+                        states : State {
+                            name: "detailsView"
+                            when: resultsList.state==="detailsView" && listItem.ListView.isCurrentItem
+                            PropertyChanges { target: actionsListView; visible: true  }
+                            PropertyChanges { target: listItemTopRow; height: icon_size*2 }
+                            PropertyChanges { target: listItemIcon; width: icon_size*2; height: icon_size*2 }
+                            PropertyChanges { target: textId; font.pixelSize:item_title_fontsize*1.2; horizontalAlignment: Text.AlignHCenter}
+                            PropertyChanges { target: subTextId; font.pixelSize: item_description_fontsize*1.2; horizontalAlignment: Text.AlignHCenter; color: foreground_color; wrapMode:Text.Wrap}
+                            PropertyChanges { target: mouseArea; enabled: false }
+                            PropertyChanges { target: historyTextInput; Keys.forwardTo: actionsListView }
+                            StateChangeScript{
+                                id: actionLoaderScript
+                                script: {
+                                    if (actionsModel.count===0){
+                                        var actionTexts = actionsRole;
+                                        for (var i = 0; i < actionTexts.length; i++)
+                                            actionsModel.append({"name": actionTexts[i]});
+                                    }
+                                }
                             }
-//                            Rectangle {
-//                                width: parent.height-2
-//                                height: width
-//                                radius: space
-//                                anchors.centerIn: parent
-//                                color: Qt.darker(background_color, 2)
-//                                Text {
-//                                    anchors.fill: parent
-//                                    horizontalAlignment: Text.AlignHCenter
-//                                    verticalAlignment: Text.AlignVCenter
-//                                    font.pixelSize : parent.height-12
-//                                    color: resultsList.currentIndex===index?highlight_color:foreground_color
-//                                    text: display.slice(0,1);
-//                                    font.family: "DejaVu Sans ExtraLight"
-//                                    font.capitalization: Font.AllUppercase
-//                                    Behavior on color {ColorAnimation {duration:100;}}
-//                                }
-//                            }
+                        } // states
+
+
+                        // This function activates the "action" of item
+                        function subtextForModifier(){ // TODO
+                            return resultsModel.data(resultsModel.index(index, 0), 1000)
                         }
 
-                        Column{
-                            id: listItemTextArea
-                            anchors.left: listItemIconArea.right
-                            anchors.right: parent.right
-                            anchors.leftMargin: space
-                            anchors.verticalCenter: listItemIconArea.verticalCenter
-
-                            Text {
-                                id: listItemTextfield
-                                width: parent.width
-                                text: model.display
-                                elide: Text.ElideRight
-                                color: resultsList.currentIndex===index?highlight_color:foreground_color
-                                font.pixelSize: item_title_fontsize
-                                Behavior on color {ColorAnimation {duration:100;}}
-                            }
-
-                            Text {
-                                id: listItemInfofield
-                                width: parent.width
-                                text: model.toolTip
-                                elide: Text.ElideMiddle
-                                color: resultsList.currentIndex===index?highlight_color:foreground_color
-                                font.pixelSize: item_description_fontsize
-                                Behavior on color {ColorAnimation {duration:100;}}
-                             }
+                        // This function activates the "action" of item
+                        function activate(/*optional*/ action){
+                            action = action || -1; //default if none given
+                            listItem.ListView.view.itemActivated()
+                            /*
+                                For this use the setData funtion is abused, to be able to use the
+                                interface of QAbstractItemModel.
+                                Currently a positive value "action" activates the action 'a' in the set of
+                                actions 'A' returned by actionsRole. If "action" is not in the range of
+                                'A' the default role is activated. Negative values are used for
+                                actions that should depend on the modifiers pressed. This way the backend
+                                extensions can decide which action should be executed for the modifiers.
+                                Currently this mapping is used:
+                                "NoModifier"="-1"
+                                "Alt"="-2"
+                                "Meta"="-3"
+                                "Ctrl"="-4"
+                            */
+                            resultsModel.setData(resultsModel.index(index, 0), action, activateRole)
                         }
 
                         MouseArea {
                             id: mouseArea
                             anchors.fill: parent
-                            hoverEnabled: true
                             onClicked: resultsList.currentIndex = index
-                            onDoubleClicked: {
-                                resultsList.currentIndex = index
-                                indexActivated(index)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+                            onDoubleClicked: { listItem.activate() }
+                        } // mouseArea (MouseArea)
 
-    Keys.onPressed: {
-        event.accept
-        switch (event.key) {
-            case Qt.Key_Up:
-                (resultsList.currentIndex===-1 || event.modifiers===Qt.ControlModifier)
-                        ? historyTextInput.nextIteration()
-                        : resultsList.decrementCurrentIndex()
-                return;
-            case Qt.Key_Down:
-                (event.modifiers===Qt.ControlModifier)
-                        ? historyTextInput.prevIteration()
-                        : resultsList.incrementCurrentIndex()
-                return;
-            case Qt.Key_PageUp:
-                resultsList.currentIndex - max_items < 0
-                        ? resultsList.currentIndex = 0
-                        : resultsList.currentIndex -= max_items
-                return;
-            case Qt.Key_PageDown:
-                resultsList.currentIndex + max_items > resultsList.count
-                        ? resultsList.currentIndex = resultsList.count-1
-                        : resultsList.currentIndex += max_items
-                return;
-        }
-        event.ignore
-    }
+                        Column{
+                            id: listItemColumn
+                            width: parent.width
+                            Item {
+                                id: listItemTopRow
+                                width: parent.width
+                                height: Math.max(listItemIcon.height, listItemTextArea.height)
+
+                                Image {
+                                    id: listItemIcon
+                                    asynchronous: true
+                                    source: iconRole
+                                    width: icon_size
+                                    height: icon_size
+                                    sourceSize.width: icon_size*2
+                                    sourceSize.height: icon_size*2
+                                    cache: true
+                                    fillMode: Image.PreserveAspectFit
+                                    visible: false
+                                } // listItemIcon
+                                InnerShadow {
+                                    id: innerShadow
+                                    width: source.width
+                                    height: source.height
+                                    horizontalOffset: listItem.ListView.isCurrentItem?0:4
+                                    verticalOffset: listItem.ListView.isCurrentItem?0:4
+                                    radius: listItem.ListView.isCurrentItem?0:4
+                                    samples: 8
+                                    color: "#80000000"
+                                    visible: false
+                                    Behavior on verticalOffset { NumberAnimation{ } }
+                                    Behavior on horizontalOffset { NumberAnimation{ } }
+                                    Behavior on radius { NumberAnimation{ } }
+                                    source: listItemIcon
+                                }
+                                Desaturate {
+                                    id: desaturate
+                                    width: source.width
+                                    height: source.height
+                                    desaturation: listItem.ListView.isCurrentItem?0:0.9
+                                    Behavior on desaturation { NumberAnimation{ } }
+                                    source: innerShadow
+                                }
+
+                                Column{
+                                    id: listItemTextArea
+                                    anchors {
+                                        left: listItemIcon.right
+                                        leftMargin: space
+                                        right: parent.right
+                                        verticalCenter: listItemIcon.verticalCenter
+                                    }
+
+                                    Text {
+                                        id: textId
+                                        width: parent.width
+                                        text: textRole
+                                        elide: Text.ElideRight
+                                        color: listItem.ListView.isCurrentItem?highlight_color:foreground_color
+                                        font.pixelSize: item_title_fontsize
+                                        Behavior on color { ColorAnimation{ } }
+                                    }
+
+                                    Text {
+                                        id: subTextId
+                                        width: parent.width
+//                                        text: (listItem.ListView.isCurrentItem)?subtextForModifier():subTextRole
+                                        text: subTextRole
+                                        elide: Text.ElideRight
+                                        color: listItem.ListView.isCurrentItem?highlight_color:foreground_color
+                                        font.pixelSize: item_description_fontsize
+                                        // Make selection color change smooth
+                                        Behavior on color { ColorAnimation{ } }
+                                        // Make text changes smooth (actions, etc...)
+                                        Behavior on text {
+                                            SequentialAnimation {
+//                                                NumberAnimation { target: subTextId; property: "opacity"; to: 0; duration: 100 }
+                                                PropertyAction  { }
+                                                NumberAnimation { target: subTextId; property: "opacity"; to: 1; duration: 250 }
+                                            }
+                                        }
+                                    }
+                                }  // Column
+                            }  // Item
+
+                            ListView {
+                                id: actionsListView
+                                width: parent.width
+                                height: count?contentHeight:0 // Avoid warning
+                                keyNavigationWraps: true
+                                boundsBehavior: Flickable.StopAtBounds
+                                model: ListModel { id:actionsModel }
+                                clip: true
+                                spacing: space
+                                delegate: Text {
+                                    horizontalAlignment: Text.AlignHCenter
+                                    width: parent.width
+                                    text: name
+                                    elide: Text.ElideRight
+                                    font.pixelSize: (item_description_fontsize+item_title_fontsize)/2
+                                    color: ListView.isCurrentItem?highlight_color:foreground_color
+                                    Behavior on color { ColorAnimation{ } }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: actionsListView.currentIndex = index
+                                        onDoubleClicked: { listItem.activate(index)}
+                                    } // mouseArea (MouseArea)
+                                }
+                                visible: false
+                                Keys.onEnterPressed:  listItem.activate(currentIndex)
+                                Keys.onReturnPressed: listItem.activate(currentIndex)
+                            }  // actionsListView
+                        }  // Column
+                    }  // listItem (Item)
+                }  // listItemDelegate (Component)
+            }  // resultsList (ListView)
+        }  // content (Column)
+    }  // frame (Rectangle)
 
     Component.onCompleted: setPreset("Dark")
 
     function availableProperties() {
-        return ["background_color",
-                "foreground_color",
-                "highlight_color",
-                "inputline_color",
-                "border_color",
-                "input_fontsize",
-                "item_title_fontsize",
-                "item_description_fontsize",
-                "item_height",
-                "max_items",
-                "space",
-                "settingsbutton_size",
+        return ["background_color","foreground_color","highlight_color","inputline_color",
+                "border_color","input_fontsize","item_height","item_title_fontsize",
+                "item_description_fontsize","icon_size","max_items","space","settingsbutton_size",
                 "window_width"];
     }
+
     function availablePresets() {
         return ["Dark", "DarkOrange", "DarkMagenta", "DarkMint",
                 "DarkGreen", "DarkBlue", "DarkViolet",
                 "Bright", "BrightOrange", "BrightMagenta", "BrightMint",
                 "BrightGreen", "BrightBlue", "BrightViolet"];
     }
+
     function setPreset(p) {
         input_fontsize = 36
         item_title_fontsize = 26
         item_description_fontsize = 12
         item_height = 48
+        icon_size = 48
         max_items = 5
         space = 6
         settingsbutton_size = 14
@@ -380,19 +502,14 @@ FocusScope {
 
 
     // ▼ ▼ ▼ ▼ ▼ DO NOT CHANGE THIS UNLESS YOU KNOW WHAT YOU ARE DOING ▼ ▼ ▼ ▼ ▼
-    signal indexActivated(int index)
-    signal queryChanged(string text)
-    signal settingsWindowRequested()
-    function onMainWindowVisibleChanged() { historyTextInput.clearLine(); }
+
     /*
      * Currently the interface with the program logic comprises the following:
      *
-     * Context property 'model'
+     * Context property 'resultsModel'
      * Context property 'history'
-     * Listeners on signal: 'indexActivated'
-     * Listeners on signal: 'queryChanged'
-     * Listeners on signal: 'settingsWindowRequested'
-     * External invokation of 'onMainWindowVisibleChanged' (Focus out)
+     * Listeners on signal: 'startQuery'
+     * External invokation of 'onMainWindowHidden' (Focus out)
      * External invokation of availablePresets
      * External invokation of setPreset
      * External invokation of availableProperties
@@ -405,5 +522,12 @@ FocusScope {
      *
      * Note: As long albert is in alpha stage the interface may break anytime.
      */
-    property string interfaceVersion: "0.1"
+    property string interfaceVersion: "0.1" // Will not change until beta
+
+    signal startQuery(string text, bool fallbackOnly)
+
+    function onMainWindowHidden() {
+        resultsList.state=""
+        historyTextInput.clearLine();
+    }
 }

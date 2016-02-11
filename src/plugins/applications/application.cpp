@@ -68,15 +68,7 @@ void Applications::Application::activate() {
 
 
 /** ***************************************************************************/
-bool Applications::Application::hasChildren() const {
-    return true;
-}
-
-
-
-
-/** ***************************************************************************/
-vector<shared_ptr<AlbertItem> > Applications::Application::children() {
+ActionSPtrVec Applications::Application::actions() {
     return actions_;
 }
 
@@ -209,8 +201,7 @@ bool Applications::Application::readDesktopEntry() {
         if (p.exitCode() == 0)
             actions_.push_back(std::make_shared<DesktopAction>(this,
                                                                QString("Run %1 as root").arg(name_),
-                                                               QString("%1 \"%2\"").arg(s, exec_),
-                                                               iconUrl_));
+                                                               QString("%1 \"%2\"").arg(s, exec_)));
     }
 
 
@@ -234,16 +225,9 @@ bool Applications::Application::readDesktopEntry() {
 
             // Try to get an icon
             group = QString("Desktop Action %1").arg(actionString);
-            if (values[group].count("Icon")){
-                QString iconName = values[group]["Icon"];
-                QString iconPath = xdg.lookupIcon(iconName);
-                if (!iconPath.isNull()){
-                    actions_.push_back(std::make_shared<DesktopAction>(this, name, exec, QUrl::fromLocalFile(iconPath)));
-                    break;
-                }
-            }
+
             // App icon of none is specified or lookupf failed
-            actions_.push_back(std::make_shared<DesktopAction>(this, name, exec, iconUrl_));
+            actions_.push_back(std::make_shared<DesktopAction>(this, name, exec));
         }
     }
     return true;

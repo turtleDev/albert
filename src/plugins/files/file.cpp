@@ -84,17 +84,10 @@ void Files::File::activate() {
 
 
 /** ***************************************************************************/
-bool Files::File::hasChildren() const {
-    return true;
-}
-
-
-
-/** ***************************************************************************/
-vector<shared_ptr<AlbertItem>> Files::File::children() {
+ActionSPtrVec Files::File::actions() const {
     // Lazy instaciate actions
     if (!children_){
-        children_ = unique_ptr<vector<shared_ptr<AlbertItem>>>(new vector<shared_ptr<AlbertItem>>);
+        children_ = unique_ptr<ActionSPtrVec>(new ActionSPtrVec);
         children_->push_back(std::make_shared<RevealFileAction>(this));
         children_->push_back(std::make_shared<CopyFileAction>(this));
         children_->push_back(std::make_shared<CopyPathAction>(this));

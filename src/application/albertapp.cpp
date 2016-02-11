@@ -61,10 +61,10 @@ AlbertApp::AlbertApp(int &argc, char *argv[]) : QApplication(argc, argv) {
         putenv(const_cast<char*>("QSG_RENDER_LOOP=basic"));
     } else qDebug() << "QSG_RENDER_LOOP is set explicitely. Skip.";
 
-    mainWindow_ = new MainWindow;
     hotkeyManager_ = new HotkeyManager;
-    pluginManager_ = new PluginManager;
     extensionManager_ = new ExtensionManager;
+    pluginManager_ = new PluginManager;
+    mainWindow_ = new MainWindow;
 
 
     // TODO das muss ohne gehen. Loader muss laszyload können
@@ -86,9 +86,7 @@ AlbertApp::AlbertApp(int &argc, char *argv[]) : QApplication(argc, argv) {
     // Setup and teardown query sessions with the state of the widget
     QObject::connect(mainWindow_, &MainWindow::visibleChanged, extensionManager_, &ExtensionManager::setSessionActive);
     // A change in text triggers requests
-    QObject::connect(mainWindow_, &MainWindow::queryChanged, extensionManager_, &ExtensionManager::startQuery);
-    // Activation forwarding
-    QObject::connect(mainWindow_, &MainWindow::indexActivated, extensionManager_, &ExtensionManager::activateIndex);
+    QObject::connect(mainWindow_, &MainWindow::startQuery, extensionManager_, &ExtensionManager::startQuery, Qt::QueuedConnection);
     // Click on settingsButton (or shortcut) closes albert + opens settings dialog
     QObject::connect(mainWindow_, &MainWindow::settingsWindowRequested, this, &AlbertApp::openSettingsWindow);
     QObject::connect(mainWindow_, &MainWindow::settingsWindowRequested, mainWindow_, &MainWindow::hide);

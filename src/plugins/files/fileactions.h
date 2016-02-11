@@ -24,11 +24,10 @@
 namespace Files {
 
 /** ***************************************************************************/
-class AbstractFileAction : public AlbertItem
+class AbstractFileAction : public Action
 {
 public:
     AbstractFileAction(File *file) : file_(file) {}
-    QString subtext() const override { return file_->path(); }
 
 protected:
     File *file_;

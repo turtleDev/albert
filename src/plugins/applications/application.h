@@ -23,7 +23,7 @@ namespace Applications{
 
 class DesktopAction;
 
-class Application final : public AlbertItem
+class Application final : public AlbertLeaf
 {
     friend class Extension;
     friend class Indexer;
@@ -34,14 +34,14 @@ public:
     Application(const QString &path, short usage = 0)
         : path_(path), usage_(usage) {}
 
+    QUrl icon() const override;
     QString text() const override;
     QString subtext() const override;
-    QUrl icon() const override;
-    uint16_t usageCount() const override {return usage_;}
-    void activate() override;
-    bool hasChildren() const override;
-    vector<shared_ptr<AlbertItem>> children() override;
     vector<QString> aliases() const override;
+    void activate() override;
+    uint16_t usageCount() const override {return usage_;}
+    virtual Urgency urgency() const override {return Urgency::Normal;}
+    ActionSPtrVec actions() override;
 
     bool readDesktopEntry();
     const QString& path() const {return path_;}
@@ -60,6 +60,6 @@ private:
     QString exec_;
     bool    term_;
     mutable uint16_t usage_;
-    vector<shared_ptr<AlbertItem>> actions_;
+    ActionSPtrVec actions_;
 };
 }

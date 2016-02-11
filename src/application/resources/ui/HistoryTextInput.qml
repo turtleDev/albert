@@ -1,10 +1,13 @@
-import QtQuick 2.5
+import QtQuick 2.0
 
 TextInput {
 
     function clearLine() { text = "" }
 
-    function pushTextToHistory() { history.add(text) }
+    function pushTextToHistory() {
+        console.log(text)
+        history.add(text)
+    }
 
     function clearIterator() { return history.resetIterator() }
 
@@ -28,8 +31,6 @@ TextInput {
 
     Component.onCompleted: {
         textChanged.connect(clearIterator)
-        accepted.connect(pushTextToHistory)
-        accepted.connect(clearLine)
     }
 }
 

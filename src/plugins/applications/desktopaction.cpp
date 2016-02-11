@@ -22,32 +22,15 @@
 
 /** ***************************************************************************/
 Applications::DesktopAction::DesktopAction(Application *app, const QString &name,
-                                           const QString &exec, const QUrl &iconUrl,
-                                           const bool term)
-    : app_(app), name_(name), exec_(exec), iconUrl_(iconUrl), term_(term) {}
+                                           const QString &exec, const bool term)
+    : app_(app), description_(name), exec_(exec), term_(term){}
 
 
 
 /** ***************************************************************************/
 QString Applications::DesktopAction::text() const {
-    return name_;
+    return description_;
 }
-
-
-
-/** ***************************************************************************/
-QString Applications::DesktopAction::subtext() const {
-    return exec_;
-}
-
-
-
-/** ***************************************************************************/
-QUrl Applications::DesktopAction::icon() const {
-    return iconUrl_;
-}
-
-
 
 /** ***************************************************************************/
 void Applications::DesktopAction::activate() {

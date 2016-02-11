@@ -31,13 +31,16 @@ using std::vector;
 class Action{
 public:
     virtual ~Action() {}
-    virtual QUrl icon() const = 0;
+
+    /** A description */
     virtual QString text() const = 0;
-    virtual QString subtext() const = 0;
+
+    /** Activates the item */
     virtual void activate() = 0;
 };
 
-
+typedef shared_ptr<Action> ActionSPtr;
+typedef vector<shared_ptr<Action>> ActionSPtrVec;
 
 /** ****************************************************************************
  * @brief The A(bstract)A(lbert)Item - A3Item for convenience
@@ -47,13 +50,67 @@ public:
  */
 class AlbertItem : public Action {
 public:
-    virtual std::vector<QString> aliases() const {return {text()};}
-    virtual uint16_t usageCount() const {return 0;}
-    virtual uint8_t importance() const {return 0;}
+    /** An enumeration of urgency levels */
+    enum class Urgency : unsigned char {
+        Low, // Use this if your extension tends to produce much potentially less relevant items (e.g. files)
+        Normal, // In all other cases use this
+        Notification, // Use this if your items are few, seldom and have to be on top (e.g. calculator output)
+        Alert // Like notification. Gets a visual emphasis
+    };
 
     virtual ~AlbertItem() {}
-    virtual bool hasActions() const {return false;}
-    virtual vector<shared_ptr<Action>> actions() {return vector<shared_ptr<Action>>();}
-    virtual bool hasChildren() const {return false;}
-    virtual vector<shared_ptr<AlbertItem>> children() {return vector<shared_ptr<AlbertItem>>();}
+
+    /** The icon for the item */
+    virtual QUrl icon() const = 0;
+
+    /** The declarative subtext for the item */
+    virtual QString subtext() const = 0;
+
+    /** The additional aliases that may match the query */
+    virtual vector<QString> aliases() const = 0;
+
+    /** The usage count used for the ranking in the list */
+    virtual uint16_t usageCount() const = 0;
+
+    /** Urgency level of the item */
+    virtual Urgency urgency() const = 0;
+
+    /** The alternative actions of the item*/
+    virtual ActionSPtrVec actions() = 0;
+
+    /** The children of the item */
+    virtual AlbertItem* parent() = 0;
+
+    /** The children of the item */
+    virtual vector<shared_ptr<AlbertItem>> children() = 0;
+
+    /** Indicates if the item has children, for performance  */
+    virtual bool hasChildren() const = 0;
 };
+
+typedef shared_ptr<AlbertItem> ItemSPtr;
+typedef vector<shared_ptr<AlbertItem>> ItemSPtrVec;
+
+
+
+class AlbertLeaf : public AlbertItem {
+public:
+    virtual ~AlbertLeaf() {}
+    AlbertItem* parent() override { return nullptr; }
+    ItemSPtrVec children() override { return ItemSPtrVec(); }
+    bool hasChildren() const override { return false; }
+};
+
+typedef shared_ptr<AlbertLeaf> LeafSPtr;
+typedef vector<shared_ptr<AlbertLeaf>> LeafSPtrVec;
+
+
+
+class ActionItem : public AlbertLeaf {
+public:
+    virtual ~ActionItem() {}
+    ActionSPtrVec actions() override { return ActionSPtrVec(); }
+};
+
+typedef shared_ptr<AlbertLeaf> LeafSPtr;
+typedef vector<shared_ptr<AlbertLeaf>> LeafSPtrVec;

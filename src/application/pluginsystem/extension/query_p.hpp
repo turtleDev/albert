@@ -51,6 +51,14 @@ class QueryPrivate : public QAbstractItemModel
     Q_OBJECT
     friend class ExtensionManager;
 
+    enum class QtRoles {
+        TextRole = 1000,
+        SubTextRole,
+        IconRole,
+        ActionsRole,
+        ActivateRole = 1100
+    };
+
 public:
     /** ***********************************************************************/
     QueryPrivate(const QString &term)
@@ -147,6 +155,20 @@ public:
 
 
 
+
+    /** ***********************************************************************/
+    QHash<int, QByteArray> roleNames() const override {
+        return QHash<int, QByteArray>({
+                                          {static_cast<int>(QtRoles::TextRole),"textRole"},
+                                          {static_cast<int>(QtRoles::SubTextRole),"subTextRole"},
+                                          {static_cast<int>(QtRoles::IconRole),"iconRole"},
+                                          {static_cast<int>(QtRoles::ActionsRole),"actionsRole"},
+                                          {static_cast<int>(QtRoles::ActivateRole),"activateRole"}
+                                      });
+    }
+
+
+
     /** ***********************************************************************/
     int rowCount(const QModelIndex & parent = QModelIndex()) const override {
         if (parent.isValid()) // Child level
@@ -169,17 +191,46 @@ public:
     QVariant data(const QModelIndex & index, int role) const override {
         if (index.isValid()) {
             TreeItem *ti = static_cast<TreeItem*>(index.internalPointer());
-
-            switch (role) {
-            case Qt::DisplayRole:
+            switch (static_cast<QtRoles>(role)) {
+            case QtRoles::TextRole:
                 return ti->data->text();
-            case Qt::ToolTipRole:
+            case QtRoles::SubTextRole:
                 return ti->data->subtext();
-            case Qt::DecorationRole:
+            case QtRoles::IconRole:
                 return ti->data->icon();
+            case QtRoles::ActionsRole: {
+                QStringList actionTexts;
+                for (ActionSPtr &action : ti->data->actions())
+                    actionTexts.append(action->text());
+                return actionTexts;
+            }
+            case QtRoles::ActivateRole:
+                return static_cast<int>(QtRoles::ActivateRole); // Convenience hack
+            default:
+                return QVariant();
             }
         }
         return QVariant();
+    }
+
+
+
+    /** ***********************************************************************/
+    bool setData(const QModelIndex &index, const QVariant &value, int role) override {
+        if (index.isValid()) {
+            TreeItem *ti = static_cast<TreeItem*>(index.internalPointer());
+            switch (static_cast<QtRoles>(role)) {
+            case QtRoles::ActivateRole: {
+                int actionValue = value.toInt();
+                if (0 <= actionValue && actionValue < static_cast<int>(ti->data->actions().size()))
+                    ti->data->actions()[actionValue]->activate();
+                return true;
+            }
+            default:
+                return false;
+            }
+        }
+        return false;
     }
 
 

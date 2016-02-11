@@ -35,7 +35,7 @@ public:
     void setSessionActive(bool);
 
 public slots:
-    void startQuery(const QString &searchTerm);
+    void startQuery(const QString &qry, bool fallbackOnly);
     void activateIndex(int index);
 
 private:

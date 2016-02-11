@@ -41,16 +41,17 @@ public:
     virtual void teardownSession() {}
 
     /**
-     * @brief Indicates that the extension shall be run only if one of its
-     * triggers is prefix of the query
+     * @brief Indicates that the extension shall be the only extension to run
+     * Ignored if the extension has no triggers.
+     * @return True, if the extension shall be run exclusive, else false.
      */
-    virtual bool isTriggerOnly() const {return false;}
     virtual bool runExclusive() const {return false;}
 
     /**
-     * @brief The triggers which let the extension be run solely, if one of its
-     * triggers is prefix of the query
-     * @return
+     * @brief The triggers which let the extension be run.
+     * The extension is not queried unless one of the triggers matches the first
+     * section of the query.
+     * @return Triggers.
      */
     virtual QStringList triggers() const {return QStringList();}
 

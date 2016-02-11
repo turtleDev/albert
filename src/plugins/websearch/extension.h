@@ -45,7 +45,6 @@ public:
     // IExtension
     void handleQuery(shared_ptr<Query> query) override;
     void handleFallbackQuery(shared_ptr<Query> query) override;
-    bool isTriggerOnly() const override {return true;}
     virtual bool runExclusive() const {return true;}
     QStringList triggers() const override;
 

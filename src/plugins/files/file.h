@@ -41,11 +41,13 @@ public:
     QString subtext() const override;
     QUrl    icon() const override;
     void activate() override;
+    vector<QString> aliases() const override;
 
     uint16_t usageCount() const { return usage_; }
-    bool hasChildren() const override;
-    vector<shared_ptr<AlbertItem>> children() override;
-    vector<QString> aliases() const override;
+
+    bool hasActions() const override {return true;}
+    ActionSPtrVec actions() const override;
+
 
     const QString &path() const { return path_; }
     const QMimeType &mimetype() const { return mimetype_; }
@@ -57,7 +59,7 @@ private:
     QString path_;
     QMimeType mimetype_;
     mutable short usage_;
-    unique_ptr<vector<shared_ptr<AlbertItem>>> children_;
+    unique_ptr<ActionSPtrVec> children_;
     static map<QString, QUrl> iconCache_;
 };
 
