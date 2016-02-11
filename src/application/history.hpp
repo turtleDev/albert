@@ -49,7 +49,11 @@ public:
     }
 
     Q_INVOKABLE void add(QString str) {
-        lines_.prepend(str);
+        if (!str.isEmpty()){
+            if (lines_.contains(str))
+                lines_.removeAll(str); // Remove dups
+            lines_.prepend(str);
+        }
     }
 
     Q_INVOKABLE QString next() {
