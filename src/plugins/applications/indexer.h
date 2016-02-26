@@ -20,9 +20,10 @@
 #include <QMutex>
 
 namespace Applications {
+
 class Extension;
 
-class Indexer final : public QObject,  public QRunnable
+class Extension::Indexer final : public QObject,  public QRunnable
 {
     Q_OBJECT
 public:

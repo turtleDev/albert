@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "configwidget.h"
-#include "application.h"
+#include "desktopentry.h"
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QStandardPaths>
@@ -74,9 +74,9 @@ void Applications::ConfigWidget::onButton_Terminal() {
                 tr("Terminal Command"),
                 tr("Terminal"),
                 QLineEdit::Normal,
-                Applications::Application::terminal);
+                Applications::DesktopEntry::terminal);
 
     if(newterm.isEmpty())
         return;
-    Applications::Application::terminal = newterm;
+    Applications::DesktopEntry::terminal = newterm;
 }

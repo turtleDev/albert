@@ -22,37 +22,38 @@
 #include <memory>
 #include <map>
 using std::map;
-#include "application.h"
-#include "desktopaction.h"
+#include "desktopentry.h"
+#include "desktopaction.hpp"
 #include "albertapp.h"
 #include "iconlookup/xdgiconlookup.h"
 
 
-QString Applications::Application::terminal;
+QString Applications::DesktopEntry::terminal;
+QStringList Applications::DesktopEntry::supportedGraphicalSudo = {"gksu", "kdesu"};
 
 /** ***************************************************************************/
-QString Applications::Application::text() const {
+QString Applications::DesktopEntry::text() const {
     return name_;
 }
 
 
 
 /** ***************************************************************************/
-QString Applications::Application::subtext() const {
+QString Applications::DesktopEntry::subtext() const {
     return (altName_.isNull()) ? exec_ : altName_;
 }
 
 
 
 /** ***************************************************************************/
-QUrl Applications::Application::icon() const {
+QUrl Applications::DesktopEntry::icon() const {
     return iconUrl_;
 }
 
 
 
 /** ***************************************************************************/
-void Applications::Application::activate() {
+void Applications::DesktopEntry::activate() {
     // Standard action
     qApp->hideMainWindow();
     // Finally since the exec key expects to be interpreted and escapes and
@@ -68,23 +69,23 @@ void Applications::Application::activate() {
 
 
 /** ***************************************************************************/
-ActionSPtrVec Applications::Application::actions() {
+ActionSPtrVec Applications::DesktopEntry::actions() {
     return actions_;
 }
 
 
 
 /** ***************************************************************************/
-std::vector<QString> Applications::Application::aliases() const {
+std::vector<QString> Applications::DesktopEntry::aliases() const {
     return std::vector<QString>({name_, altName_, exec_.section(" ",0,0)});
 }
 
 
 
 /** ***************************************************************************/
-bool Applications::Application::readDesktopEntry() {
+bool Applications::DesktopEntry::readDesktopEntry() {
     // TYPES http://standards.freedesktop.org/desktop-entry-spec/latest/ar01s05.html
-    map<QString,map<QString,QString>> values;
+    map<QString,map<QString,QString>> sectionMap;
 
     // Read the file
     QFile desktopFile(path_);
@@ -107,35 +108,44 @@ bool Applications::Application::readDesktopEntry() {
 
             key = line.section('=', 0,0).trimmed();
             value = line.section('=', 1, -1).trimmed();
-            values[currentGroup][key]=value;
+            sectionMap[currentGroup][key]=value;
         }
         desktopFile.close();
     } else return false;
 
-
-    if (values["Desktop Entry"]["NoDisplay"] == "true")
+    // Skip if there is no "Desktop Entry" section
+    map<QString,map<QString,QString>>::iterator sectionIterator;
+    if ((sectionIterator = sectionMap.find("Desktop Entry")) == sectionMap.end())
         return false;
 
+    /*
+     * Handle "Desktop Entry" section
+     */
+
+    map<QString,QString> &valueMap = sectionIterator->second;
+    map<QString,QString>::iterator valueIterator;
+
+    // Skip, if this desktop entry must not be shown
+    if ((valueIterator = valueMap.find("NoDisplay")) != valueMap.end() && valueIterator->second == "true")
+        return false;
+
+    // Skip if the current desktop environment is not specified in "OnlyShowIn"
+    if ((valueIterator = valueMap.find("OnlyShowIn")) != valueMap.end())
+        if (!valueIterator->second.split(';',QString::SkipEmptyParts).contains(getenv("XDG_CURRENT_DESKTOP")))
+            return false;
 
     // Try to get the (localized name)
     QString locale = QLocale().name();
     QString shortLocale = locale.left(2);
-    if (values["Desktop Entry"].count(QString("Name[%1]").arg(locale)))
-        name_ = escapeString(values["Desktop Entry"][QString("Name[%1]").arg(locale)]);
-    else if (values["Desktop Entry"].count(QString("Name[%1]").arg(shortLocale)))
-        name_ = escapeString(values["Desktop Entry"][QString("Name[%1]").arg(shortLocale)]);
-    else if (values["Desktop Entry"].count("Name"))
-        name_ = escapeString(values["Desktop Entry"]["Name"]);
+    if ( (valueIterator = valueMap.find(QString("Name[%1]").arg(locale))) != valueMap.end()
+         || (valueIterator = valueMap.find(QString("Name[%1]").arg(shortLocale))) != valueMap.end()
+         || (valueIterator = valueMap.find(QString("Name"))) != valueMap.end())
+        name_ = escapeString(valueIterator->second);
     else return false;
 
-
-
-    /*
-     * The Exec Key - pretty complicated stuff
-     * http://standards.freedesktop.org/desktop-entry-spec/latest/ar01s06.html
-     */
-    if (values["Desktop Entry"].count("Exec"))
-        exec_ = escapeString(values["Desktop Entry"]["Exec"]);
+    // Try to get the exec key (http://standards.freedesktop.org/desktop-entry-spec/latest/ar01s06.html)
+    if ((valueIterator = valueMap.find("Exec")) != valueMap.end())
+        exec_ = escapeString(valueIterator->second);
     else return false;
 
     exec_.replace("%f", ""); // Unhandled TODO
@@ -146,8 +156,8 @@ bool Applications::Application::readDesktopEntry() {
     exec_.replace("%D", ""); // Deprecated
     exec_.replace("%n", ""); // Deprecated
     exec_.replace("%N", ""); // Deprecated
-    if (values["Desktop Entry"].count("Icon"))
-        exec_.replace("%i", QString("--icon %1").arg(values["Desktop Entry"]["Icon"]));
+    if ((valueIterator = valueMap.find("Icon")) != valueMap.end())
+        exec_.replace("%i", QString("--icon %1").arg(valueIterator->second));
     else exec_.replace("%i", "");
     exec_.replace("%c", name_);
     exec_.replace("%k", path_);
@@ -157,86 +167,91 @@ bool Applications::Application::readDesktopEntry() {
 
     // Try to get the icon
     XdgIconLookup xdg;
-    QString iconName;
-    if (values["Desktop Entry"].count("Icon")){
-        QString iconName = values["Desktop Entry"]["Icon"];
-        QString iconPath = xdg.lookupIcon(iconName);
+    QString iconPath;
+    iconUrl_ = QUrl();
+    if ((valueIterator = valueMap.find("Icon")) != valueMap.end()){
+        iconPath = xdg.lookupIcon(valueIterator->second);
         if (!iconPath.isNull())
             iconUrl_ = QUrl::fromLocalFile(iconPath);
-        else
-            qWarning() << iconName << "was not found";
-    } else {
-        QString iconPath = xdg.lookupIcon("exec");
+        else{
+            iconUrl_ = QUrl();
+            qWarning() << valueIterator->second << "was not found";
+        }
+    }
+
+    // Try to get a default icon if iconUrl_ is still empty
+    if (iconUrl_.isEmpty()) {
+        iconPath = xdg.lookupIcon("exec");
         if (!iconPath.isNull())
             iconUrl_ = QUrl::fromLocalFile(iconPath);
         else
             qWarning() << "exec" << "was not found";
     }
 
+    // Skip this desktop entry, icons are mandatory
+    if (iconUrl_.isEmpty())
+        return false;
+
     // Try to get any [localized] secondary information comment
-    if (values["Desktop Entry"].count(QString("Comment[%1]").arg(locale)))
-        altName_ = values["Desktop Entry"][QString("Comment[%1]").arg(locale)];
-    else if (values["Desktop Entry"].count(QString("Comment[%1]").arg(shortLocale)))
-        altName_ = values["Desktop Entry"][QString("Comment[%1]").arg(shortLocale)];
-    else if (values["Desktop Entry"].count("Comment"))
-        altName_ = values["Desktop Entry"]["Comment"];
-    else if (values["Desktop Entry"].count(QString("GenericName[%1]").arg(locale)))
-        altName_ = values["Desktop Entry"][QString("GenericName[%1]").arg(locale)];
-    else if (values["Desktop Entry"].count(QString("GenericName[%1]").arg(shortLocale)))
-        altName_ = values["Desktop Entry"][QString("GenericName[%1]").arg(shortLocale)];
-    else if (values["Desktop Entry"].count("GenericName"))
-        altName_ = values["Desktop Entry"]["GenericName"];
+    if ( (valueIterator = valueMap.find(QString("Comment[%1]").arg(locale))) != valueMap.end()
+         || (valueIterator = valueMap.find(QString("Comment[%1]").arg(shortLocale))) != valueMap.end()
+         || (valueIterator = valueMap.find(QString("Comment"))) != valueMap.end()
+         || (valueIterator = valueMap.find(QString("GenericName[%1]").arg(locale))) != valueMap.end()
+         || (valueIterator = valueMap.find(QString("GenericName[%1]").arg(shortLocale))) != valueMap.end()
+         || (valueIterator = valueMap.find(QString("GenericName"))) != valueMap.end())
+        altName_ = escapeString(valueIterator->second);
 
-    // No additional actions for terminal apps
-    term_ = values["Desktop Entry"]["Terminal"] == "true";
-    if(term_)
-        return true;
-
-    // Root actions
-    QStringList graphicalSudos({"gksu", "kdesu"});
-    for (const QString &s : graphicalSudos){
+    // Root action. (FistComeFirstsServed. TODO: more sophisticated solution)
+    for (const QString &s : supportedGraphicalSudo){
         QProcess p;
         p.start("which", {s});
         p.waitForFinished(-1);
-        if (p.exitCode() == 0)
-            actions_.push_back(std::make_shared<DesktopAction>(this,
-                                                               QString("Run %1 as root").arg(name_),
-                                                               QString("%1 \"%2\"").arg(s, exec_)));
+        if (p.exitCode() == 0){
+            actions_.push_back(std::make_shared<DesktopAction>(
+                                   this, QString("Run %1 as root").arg(name_),
+                                   QString("%1 \"%2\"").arg(s, exec_)));
+            break;
+        }
     }
 
+    /*
+     * Handle "Desktop Action X" sections
+     */
 
-    // Desktop entry actions
-    if (values["Desktop Entry"].count("Actions")){
-        QString actionsString = values["Desktop Entry"]["Actions"];
-        QStringList actionStrings = actionsString.split(';',QString::SkipEmptyParts);
+    actions_.clear();
+    if ((valueIterator = valueMap.find("Actions")) != valueMap.end()){
+        QStringList actionStrings = valueIterator->second.split(';',QString::SkipEmptyParts);
         QString name;
         QString exec;
-        QString group;
         for (const QString &actionString: actionStrings){
-            // Get the name
-            group = QString("Desktop Action %1").arg(actionString);
-            if (!values[group].count("Name")) continue;
-            name = values[group]["Name"];
 
-            // Get the command
-            group = QString("Desktop Action %1").arg(actionString);
-            if (!values[group].count("Exec")) continue;
-            exec = values[group]["Exec"];
+            // Get iterator to action section
+            if ((sectionIterator = sectionMap.find(QString("Desktop Action %1").arg(actionString))) == sectionMap.end())
+                continue;
+            map<QString,QString> &valueMap = sectionIterator->second;
 
-            // Try to get an icon
-            group = QString("Desktop Action %1").arg(actionString);
+            // Get action name
+            if ((valueIterator = valueMap.find("Name")) == valueMap.end())
+                continue;
+            name = valueIterator->second;
+
+            // Get action command
+            if ((valueIterator = valueMap.find("Exec")) == valueMap.end())
+                continue;
+            exec = valueIterator->second;
 
             // App icon of none is specified or lookupf failed
             actions_.push_back(std::make_shared<DesktopAction>(this, name, exec));
         }
     }
+
     return true;
 }
 
 
 
 /** ***************************************************************************/
-QString Applications::Application::escapeString(const QString &unescaped) {
+QString Applications::DesktopEntry::escapeString(const QString &unescaped) {
     QString result;
     result.reserve(unescaped.size());
 

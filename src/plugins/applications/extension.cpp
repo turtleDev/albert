@@ -24,7 +24,7 @@
 #include <memory>
 #include "extension.h"
 #include "configwidget.h"
-#include "application.h"
+#include "desktopentry.h"
 #include "indexer.h"
 #include "query.h"
 
@@ -59,13 +59,13 @@ Applications::Extension::Extension() : IExtension("Applications") {
     // Set terminal emulator
     v = s.value(CFG_TERM);
     if (v.isValid() && v.canConvert(QMetaType::QString))
-        Application::terminal = v.toString();
+        DesktopEntry::terminal = v.toString();
     else{
-        Application::terminal = getenv("TERM");
-        if (Application::terminal.isEmpty())
-            Application::terminal = DEF_TERM;
+        DesktopEntry::terminal = getenv("TERM");
+        if (DesktopEntry::terminal.isEmpty())
+            DesktopEntry::terminal = DEF_TERM;
         else
-            Application::terminal.append(" -e %1");
+            DesktopEntry::terminal.append(" -e %1");
     }
 
 
@@ -90,7 +90,7 @@ Applications::Extension::Extension() : IExtension("Applications") {
             for (quint64 i = 0; i < size; ++i) {
                 in >> path >> usage;
                 // index is updated after this
-                appIndex_.push_back(std::make_shared<Application>(path, usage));
+                appIndex_.push_back(std::make_shared<DesktopEntry>(path, usage));
             }
             dataFile.close();
         } else
@@ -123,7 +123,7 @@ Applications::Extension::~Extension() {
     s.beginGroup(name);
     s.setValue(CFG_FUZZY, searchIndex_.fuzzy());
     s.setValue(CFG_PATHS, rootDirs_);
-    s.setValue(CFG_TERM, Applications::Application::terminal);
+    s.setValue(CFG_TERM, Applications::DesktopEntry::terminal);
 
     // Serialize data
     QFile dataFile(
@@ -139,7 +139,7 @@ Applications::Extension::~Extension() {
 
         // Serialize
         out << static_cast<quint64>(appIndex_.size());
-        for (shared_ptr<Application> &de : appIndex_)
+        for (shared_ptr<DesktopEntry> &de : appIndex_)
             out << de->path() << de->usageCount();
 
         dataFile.close();
@@ -191,7 +191,7 @@ void Applications::Extension::handleQuery(shared_ptr<Query> query) {
     // Add results to query. This cast is safe since index holds files only
     for (shared_ptr<AlbertItem> obj : indexables)
         // TODO `Search` has to determine the relevance. Set to 0 for now
-        query->addMatch(std::static_pointer_cast<Application>(obj), 0);
+        query->addMatch(std::static_pointer_cast<DesktopEntry>(obj), 0);
 }
 
 

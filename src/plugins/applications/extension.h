@@ -28,9 +28,8 @@
 
 namespace Applications {
 
-class Application;
+class DesktopEntry;
 class ConfigWidget;
-class Indexer;
 
 class Extension final : public QObject, public IExtension
 {
@@ -38,7 +37,7 @@ class Extension final : public QObject, public IExtension
     Q_PLUGIN_METADATA(IID ALBERT_EXTENSION_IID FILE "metadata.json")
     Q_INTERFACES(IExtension)
 
-    friend class Indexer;
+    class Indexer;
 
 public:
     Extension();
@@ -62,7 +61,7 @@ public:
 
 private:
     QPointer<ConfigWidget> widget_;
-    std::vector<shared_ptr<Application>> appIndex_;
+    std::vector<shared_ptr<DesktopEntry>> appIndex_;
     Search searchIndex_;
     QMutex indexAccess_;
     QPointer<Indexer> indexer_;

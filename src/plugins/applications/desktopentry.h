@@ -16,23 +16,27 @@
 
 #pragma once
 #include <vector>
-using std::vector;
 #include "abstractobjects.hpp"
+using std::vector;
 
 namespace Applications{
 
 class DesktopAction;
 
-class Application final : public AlbertLeaf
+class DesktopEntry final : public AlbertLeaf
 {
     friend class Extension;
-    friend class Indexer;
+    class DesktopAction;
 
 public:
-    Application() = delete;
-    Application(const Application &) = delete;
-    Application(const QString &path, short usage = 0)
+    DesktopEntry() = delete;
+    DesktopEntry(const DesktopEntry &) = delete;
+    DesktopEntry(const QString &path, short usage = 0)
         : path_(path), usage_(usage) {}
+
+    /*
+     * Implementations of virtual functions
+     */
 
     QUrl icon() const override;
     QString text() const override;
@@ -40,14 +44,23 @@ public:
     vector<QString> aliases() const override;
     void activate() override;
     uint16_t usageCount() const override {return usage_;}
-    virtual Urgency urgency() const override {return Urgency::Normal;}
     ActionSPtrVec actions() override;
 
-    bool readDesktopEntry();
-    const QString& path() const {return path_;}
-    void incUsage() {++usage_;}
+    /*
+     * Item specific members
+     */
 
+    /** Updates the desktop entry */
+    bool readDesktopEntry();
+
+    /** Return the path of the desktop entry */
+    const QString& path() const {return path_;}
+
+    /** The command to start applications in a terminal */
     static QString terminal;
+
+    /** The list of supported graphical sudo applications */
+    static QStringList supportedGraphicalSudo;
 
 private:
     static QString escapeString(const QString &unescaped);
