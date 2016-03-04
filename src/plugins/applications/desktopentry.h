@@ -64,7 +64,9 @@ public:
 
 private:
     static QString escapeString(const QString &unescaped);
-//    static void parseCommandLine(const QString & cmdLine, QString *program, QStringList *arguments);
+    static QString quoteString(const QString &unquoted);
+    static QStringList execValueEscape(const QString &value);
+    static QIcon getIcon(const QString &iconStr);
 
     QString path_;
     QString name_;
