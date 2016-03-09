@@ -11,6 +11,7 @@ include_directories(
 set(SRC
     metadata.json
     extension.cpp
+    configwidget.cpp
     ../../shared/iconlookup/xdgiconlookup.cpp
 )
 
@@ -18,7 +19,11 @@ qt5_add_resources(QRC
     ${LIB_NAME}.qrc
 )
 
-add_library(${LIB_NAME} SHARED ${SRC})
+qt5_wrap_ui(UI
+    configwidget.ui
+)
+
+add_library(${LIB_NAME} SHARED ${SRC} ${UI})
 set_target_properties(${LIB_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_link_libraries(${LIB_NAME} ${Qt5Widgets_LIBRARIES} muparser)
 
