@@ -37,13 +37,6 @@ Applications::ConfigWidget::ConfigWidget(QWidget *parent) : QWidget(parent) {
 
 
 /** ***************************************************************************/
-Applications::ConfigWidget::~ConfigWidget() {
-
-}
-
-
-
-/** ***************************************************************************/
 void Applications::ConfigWidget::onButton_PathAdd() {
     QString path = QFileDialog::getExistingDirectory(
                 this,

@@ -18,10 +18,9 @@
 #include <QObject>
 #include <QRunnable>
 #include <QMutex>
+#include "extension.h"
 
 namespace Applications {
-
-class Extension;
 
 class Extension::Indexer final : public QObject,  public QRunnable
 {

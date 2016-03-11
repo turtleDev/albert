@@ -197,7 +197,7 @@ public:
             case QtRoles::SubTextRole:
                 return ti->data->subtext();
             case QtRoles::IconRole:
-                return ti->data->icon();
+                return ti->data->iconUrl();
             case QtRoles::ActionsRole: {
                 QStringList actionTexts;
                 for (ActionSPtr &action : ti->data->actions())
@@ -222,8 +222,13 @@ public:
             switch (static_cast<QtRoles>(role)) {
             case QtRoles::ActivateRole: {
                 int actionValue = value.toInt();
+
+                // Secondary action
                 if (0 <= actionValue && actionValue < static_cast<int>(ti->data->actions().size()))
                     ti->data->actions()[actionValue]->activate();
+                else // Default
+                    ti->data->activate();
+
                 return true;
             }
             default:

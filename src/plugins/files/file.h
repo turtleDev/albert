@@ -33,26 +33,45 @@ class File final : public AlbertItem
     friend class Indexer;
 
 public:
+
+    class OpenFileAction;
+    class RevealFileAction;
+    class CopyFileAction;
+    class CopyPathAction;
+
     File() = delete;
     File(const File &) = delete;
     File(QString path, QMimeType mimetype, short usage = 0);
 
+    /*
+     * Implementation of AlbertItem interface
+     */
+
+    QUrl iconUrl() const override;
     QString text() const override;
     QString subtext() const override;
-    QUrl    icon() const override;
-    void activate() override;
     vector<QString> aliases() const override;
-
+    void activate() override;
     uint16_t usageCount() const { return usage_; }
+    ActionSPtrVec actions() override;
 
-    bool hasActions() const override {return true;}
-    ActionSPtrVec actions() const override;
+    /*
+     * Item specific members
+     */
 
+    /** Serialize the desktop entry */
+    void serialize(QDataStream &out);
 
+    /** Deserialize the desktop entry */
+    void deserialize(QDataStream &in);
+
+    /** Return the path of the file */
     const QString &path() const { return path_; }
-    const QMimeType &mimetype() const { return mimetype_; }
-    void incUsage() {++usage_;}
 
+    /** Return the mimetype of the file */
+    const QMimeType &mimetype() const { return mimetype_; }
+
+    /** Clears the icon cache */
     static void clearIconCache();
 
 private:

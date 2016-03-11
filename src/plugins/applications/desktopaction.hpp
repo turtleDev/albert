@@ -25,6 +25,7 @@ namespace Applications {
 class DesktopEntry::DesktopAction final : public Action
 {
 public:
+
     /** Consructor */
     DesktopAction(DesktopEntry *app, const QString &name, const QString &exec, const bool term=false)
         : app_(app), description_(name), exec_(exec), term_(term){}
@@ -39,7 +40,6 @@ public:
         ++app_->usage_;
     }
 
-private:
     DesktopEntry * const app_;
     const QString description_;
     const QString exec_;

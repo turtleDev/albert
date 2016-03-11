@@ -70,7 +70,6 @@ public:
     }
 
     bool setData(const QModelIndex & index, const QVariant & value, int role = Qt::EditRole) override {
-        qDebug() << index<<role<<value;
         if (role ==  Qt::EditRole){
             mainWindow_->setProperty(properties_[index.row()].toLatin1().data(), value);
             return true;

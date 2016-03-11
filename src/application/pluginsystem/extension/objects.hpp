@@ -19,11 +19,12 @@
 #include "abstractobjects.hpp"
 using std::function;
 
+/** ***************************************************************************/
 class StandardItem final : public AlbertItem
 {
 public:
     StandardItem(){}
-    StandardItem(const QString &text, const QString &subtext, const QUrl &iconUrl, std::function<void()> f)
+    StandardItem(const QString &text, const QString &subtext, const QUrl &iconUrl, function<void()> f)
         : text_(text), subtext_(subtext), iconUrl_(iconUrl), action_(f) {}
 
     QString text() const override { return text_; }
@@ -32,11 +33,11 @@ public:
     QString subtext() const override { return subtext_; }
     void setSubtext(const QString &subtext){subtext_ = subtext;}
 
-    QUrl icon() const override { return iconUrl_; }
+    QUrl iconUrl() const override { return iconUrl_; }
     void setIcon( const QUrl &iconUrl){iconUrl_ = iconUrl;}
 
-    std::function<void()> action() { return action_; }
-    void setAction(std::function<void()> action){ action_ = std::move(action);}
+    function<void()> action() { return action_; }
+    void setAction(function<void()> action){ action_ = std::move(action);}
     void activate() override { action_();}
 
 private:
@@ -46,3 +47,22 @@ private:
     function<void()> action_;
 };
 
+/** ***************************************************************************/
+struct StandardAction final : public Action
+{
+public:
+    StandardAction(const QString &text, function<void()> f)
+        : text_(text), action_(f) {}
+
+    QString text() const override { return text_; }
+    void setText(const QString &text){text_ = text;}
+
+    const function<void()>& action() { return action_; }
+    void setAction(function<void()> action){ action_ = std::move(action);}
+
+    void activate() override { action_(); }
+
+private:
+    QString text_;
+    function<void()> action_;
+};

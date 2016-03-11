@@ -21,8 +21,8 @@
 #include <QThreadPool>
 #include <QDir>
 #include <memory>
-#include "configwidget.h"
 #include "extension.h"
+#include "configwidget.h"
 #include "indexer.h"
 #include "file.h"
 #include "query.h"
@@ -51,12 +51,12 @@ const char* Files::Extension::IGNOREFILE          = ".albertignore";
 
 /** ***************************************************************************/
 Files::Extension::Extension() : IExtension("Files") {
-    qDebug("[%s] Initialize extension", name);
+    qDebug("[%s] Initialize extension", name_);
     minuteTimer_.setInterval(60000);
 
     // Load settings
     QSettings s;
-    s.beginGroup(name);
+    s.beginGroup(name_);
     indexAudio_ = s.value(CFG_INDEX_AUDIO, DEF_INDEX_AUDIO).toBool();
     indexVideo_ = s.value(CFG_INDEX_VIDEO, DEF_INDEX_VIDEO).toBool();
     indexImage_ = s.value(CFG_INDEX_IMAGE, DEF_INDEX_IMAGE).toBool();
@@ -76,7 +76,7 @@ Files::Extension::Extension() : IExtension("Files") {
     // Deserialize data
     QFile dataFile(
                 QDir(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).
-                filePath(QString("%1.dat").arg(name))
+                filePath(QString("%1.dat").arg(name_))
                 );
     if (dataFile.exists()) {
         if (dataFile.open(QIODevice::ReadOnly| QIODevice::Text)) {
@@ -89,7 +89,7 @@ Files::Extension::Extension() : IExtension("Files") {
             in >> size;
             for (quint64 i = 0; i < size; ++i) {
                 in >> path >> mimename >> usage;
-                fileIndex_.push_back(std::make_shared<File>(path, db.mimeTypeForName(mimename), usage));
+                index_.push_back(std::make_shared<File>(path, db.mimeTypeForName(mimename), usage));
             }
             dataFile.close();
         } else
@@ -103,20 +103,25 @@ Files::Extension::Extension() : IExtension("Files") {
     // Initial update
     updateIndex();
 
-    qDebug("[%s] Extension initialized", name);
+    qDebug("[%s] Extension initialized", name_);
 }
 
 
 
 /** ***************************************************************************/
 Files::Extension::~Extension() {
-    qDebug("[%s] Finalize extension", name);
+    qDebug("[%s] Finalize extension", name_);
 
-    // Stop and wait for background indexer
+    /*
+     * Stop and wait for background indexer.
+     * This should be thread safe since this thread is responisble to start the
+     * indexer and, connections to this thread are disconnected in the QObject
+     * destructor and all events for a deleted object are removed from the event
+     * queue.
+     */
     minuteTimer_.stop();
     if (!indexer_.isNull()) {
         indexer_->abort();
-        disconnect(indexer_.data(), &Indexer::destroyed, this, &Extension::updateIndex);
         QEventLoop loop;
         connect(indexer_.data(), &Indexer::destroyed, &loop, &QEventLoop::quit);
         loop.exec();
@@ -124,7 +129,7 @@ Files::Extension::~Extension() {
 
     // Save settings
     QSettings s;
-    s.beginGroup(name);
+    s.beginGroup(name_);
     s.setValue(CFG_FUZZY, searchIndex_.fuzzy());
     s.setValue(CFG_PATHS, rootDirs_);
     s.setValue(CFG_INDEX_AUDIO, indexAudio_);
@@ -139,25 +144,23 @@ Files::Extension::~Extension() {
     // Serialize data
     QFile dataFile(
                 QDir(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).
-                filePath(QString("%1.dat").arg(name))
+                filePath(QString("%1.dat").arg(name_))
                 );
     if (dataFile.open(QIODevice::ReadWrite| QIODevice::Text)) {
-        qDebug() << "[Files] Serializing to " << dataFile.fileName();
+        qDebug("[%s] Serializing to %s", name_, dataFile.fileName().toLocal8Bit().data());
         QDataStream out( &dataFile );
-
-        // Lock index against indexer
-        QMutexLocker locker(&indexAccess_);
-
-        // Serialize
-        out	<< static_cast<quint64>(fileIndex_.size());
-        for (shared_ptr<File> f : fileIndex_)
+        out	<< static_cast<quint64>(index_.size());
+        for (shared_ptr<File> f : index_)
             out << f->path_ << f->mimetype_.name() << f->usage_;
-
         dataFile.close();
+
+        // Build the offline index
+        for (auto &i : index_)
+            searchIndex_.add(i);
     } else
         qCritical() << "Could not write to " << dataFile.fileName();
 
-    qDebug("[%s] Extension finalized", name);
+    qDebug("[%s] Extension finalized", name_);
 }
 
 
@@ -174,7 +177,7 @@ QWidget *Files::Extension::widget(QWidget *parent) {
         connect(widget_.data(), &ConfigWidget::requestAddPath, this, &Extension::addDir);
         connect(widget_.data(), &ConfigWidget::requestRemovePath, this, &Extension::removeDir);
         connect(widget_->ui.pushButton_restore, &QPushButton::clicked, this, &Extension::restorePaths);
-        connect(widget_->ui.pushButton_update, &QPushButton::clicked, this, &Extension::updateIndex);
+        connect(widget_->ui.pushButton_update, &QPushButton::clicked, this, &Extension::updateIndex, Qt::QueuedConnection);
 
         // Checkboxes
         widget_->ui.checkBox_audio->setChecked(indexAudio());
@@ -205,7 +208,7 @@ QWidget *Files::Extension::widget(QWidget *parent) {
         connect(widget_->ui.spinBox_interval, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &Extension::setScanInterval);
 
         // Info
-        widget_->ui.label_info->setText(QString("%1 files indexed.").arg(fileIndex_.size()));
+        widget_->ui.label_info->setText(QString("%1 files indexed.").arg(index_.size()));
         connect(this, &Extension::statusInfo, widget_->ui.label_info, &QLabel::setText);
 
         // If indexer is active connect its statusInfo to the infoLabel
@@ -317,7 +320,7 @@ void Files::Extension::updateIndex() {
     if (!indexer_.isNull()) {
         indexer_->abort();
         widget_->ui.label_info->setText("Waiting for indexer to shut down ...");
-        connect(indexer_.data(), &Indexer::destroyed, this, &Extension::updateIndex);
+        connect(indexer_.data(), &Indexer::destroyed, this, &Extension::updateIndex, Qt::QueuedConnection);
     } else {
         // Create a new scanning runnable for the threadpool
         indexer_ = new Indexer(this);

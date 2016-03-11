@@ -20,33 +20,24 @@ class Extension;
 
 namespace Websearch {
 
-class SearchEngine final : public ActionItem
+class SearchEngine final : public AlbertItem
 {
 public:
     SearchEngine() : enabled_(false) {}
     SearchEngine(QString name, QString url, QString trigger, QUrl iconUrl, bool enabled = true);
 
-    /** The icon for the item */
-    QUrl icon() const override;
+    /*
+     * Implementation of AlbertItem interface
+     */
 
-    /** A description */
+    QUrl iconUrl() const override;
     QString text() const override;
-
-    /** The declarative subtext for the item */
     QString subtext() const override;
-
-    /** The additional aliases that may match the query */
-    vector<QString> aliases() const override { return vector<QString>(); }
-
-    /** Activates the item */
     void activate() override;
 
-    /** The usage count used for the ranking in the list */
-    uint16_t usageCount() const override {return 0;}
-
-    /** Urgency level of the item */
-    Urgency urgency() const override {return Urgency::Normal; }
-
+    /*
+     * Item specific
+     */
 
     void serialize(QDataStream &out);
     void deserialize(QDataStream &in);

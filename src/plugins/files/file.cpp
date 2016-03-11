@@ -43,32 +43,38 @@ QString Files::File::subtext() const {
 
 
 /** ***************************************************************************/
-QUrl Files::File::icon() const {
+QUrl Files::File::iconUrl() const {
+
+    // First check cache
+    QString xdgIconName = mimetype_.iconName();
+    if (iconCache_.count(xdgIconName))
+        return iconCache_[xdgIconName];
+
+    // Lookup iconName
     XdgIconLookup xdg;
     QString iconPath;
-
-    QString iconName = mimetype_.iconName();
-    if (iconCache_.count(iconName))
-        return iconCache_[iconName];
-    iconPath = xdg.lookupIcon(iconName);
+    iconPath = xdg.lookupIcon(xdgIconName);
     if (!iconPath.isNull()){
-        iconCache_.emplace(iconName, QUrl::fromLocalFile(iconPath));
+        iconCache_.emplace(xdgIconName, QUrl::fromLocalFile(iconPath));
         return QUrl::fromLocalFile(iconPath);
     }
 
+    // Lookup genericIconName
     QString genericIconName = mimetype_.genericIconName();
     iconPath = xdg.lookupIcon(genericIconName);
     if (!iconPath.isNull()){
-        iconCache_.emplace(iconName, QUrl::fromLocalFile(iconPath)); // Intended
+        iconCache_.emplace(xdgIconName, QUrl::fromLocalFile(iconPath)); // Intended
         return QUrl::fromLocalFile(iconPath);
     }
 
+    // Lookup "unknown"
     iconPath = xdg.lookupIcon("unknown");
     if (!iconPath.isNull()){
-        iconCache_.emplace(iconName, QUrl::fromLocalFile(iconPath)); // Intended
+        iconCache_.emplace(xdgIconName, QUrl::fromLocalFile(iconPath)); // Intended
         return QUrl::fromLocalFile(iconPath);
     }
 
+    // Return empty url
     return QUrl();
 }
 
@@ -84,7 +90,7 @@ void Files::File::activate() {
 
 
 /** ***************************************************************************/
-ActionSPtrVec Files::File::actions() const {
+ActionSPtrVec Files::File::actions() {
     // Lazy instaciate actions
     if (!children_){
         children_ = unique_ptr<ActionSPtrVec>(new ActionSPtrVec);

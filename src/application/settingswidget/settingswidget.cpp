@@ -75,14 +75,14 @@ SettingsWidget::SettingsWidget(MainWindow *mainWindow, HotkeyManager *hotkeyMana
     for (QString &styleDirPath : styleDirPaths){
         QDirIterator it(styleDirPath, {"*.qml"}, QDir::Files, QDirIterator::Subdirectories);
         while (it.hasNext()) {
-            qDebug() << it.next();
+            it.next();
             styles << it.fileInfo();
         }
     }
     // Fill the combobox
     int i = 0 ;
     ui.comboBox_style->addItem("Standard", QUrl(mainWindow_->DEF_STYLEPATH));
-    for (QFileInfo style : styles) {
+    for (QFileInfo &style : styles) {
         ui.comboBox_style->addItem(style.baseName(), QUrl(style.canonicalFilePath()));
         if ( QUrl(style.canonicalFilePath()) == mainWindow_->source() )
             ui.comboBox_style->setCurrentIndex(i);
@@ -143,7 +143,7 @@ void SettingsWidget::updatePluginInformations(const QModelIndex & current) {
 
     if (pluginManager_->plugins()[current.row()]->isLoaded()){
         ui.widget_pluginInfos->layout()->addWidget(
-                    dynamic_cast<IPlugin*>(pluginManager_->plugins()[current.row()]->instance())->widget()); // Takes ownership
+                    dynamic_cast<IExtension*>(pluginManager_->plugins()[current.row()]->instance())->widget()); // Takes ownership
     }
     else{
         QLabel *lbl = new QLabel("Plugin not loaded.");

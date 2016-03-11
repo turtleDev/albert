@@ -20,8 +20,8 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
-#include "extension.h"
 #include "indexer.h"
+#include "extension.h"
 #include "desktopentry.h"
 using std::vector;
 using std::shared_ptr;
@@ -31,7 +31,7 @@ using std::shared_ptr;
 void Applications::Extension::Indexer::run() {
 
     // Notification
-    qDebug("[%s] Start indexing in background thread", extension_->name);
+    qDebug("[%s] Start indexing in background thread", extension_->name_);
     emit statusInfo("Indexing desktop entries ...");
 
     // Get a new index [O(n)]
@@ -50,15 +50,16 @@ void Applications::Extension::Indexer::run() {
 
             // Check if desktop entry exists in current index
             vector<shared_ptr<DesktopEntry>>::iterator indexIt =
-                    std::find_if(extension_->appIndex_.begin(), extension_->appIndex_.end(),
+                    std::find_if(extension_->index_.begin(), extension_->index_.end(),
                                 [&path](const shared_ptr<DesktopEntry>& de){ return de->path() == path; });
 
             // If not make a new desktop entry, else reuse existing
             shared_ptr<DesktopEntry> application =
-                    (indexIt == extension_->appIndex_.end()) ? std::make_shared<DesktopEntry>(path) : *indexIt;
+                    std::make_shared<DesktopEntry>(
+                        path, (indexIt == extension_->index_.end() ? 0 : (*indexIt)->usageCount()));
 
             // Update the desktop entry, add to index if succeeded
-            if (application->readDesktopEntry())
+            if (application->parseDesktopEntry())
                 newIndex.push_back(application);
         }
     }
@@ -69,24 +70,19 @@ void Applications::Extension::Indexer::run() {
      */
 
     // Lock the access
-    extension_->indexAccess_.lock();
+    QMutexLocker locker(&extension_->indexAccess_);
+
+    // Abortion requested while block
+    if (abort_)
+        return;
 
     // Set the new index (use swap to shift destruction out of critical area)
-    std::swap(extension_->appIndex_, newIndex);
+    std::swap(extension_->index_, newIndex);
 
-    // Reset the offline index
+    // Rebuild the offline index
     extension_->searchIndex_.clear();
-
-    // Build the new offline index
-    for (const shared_ptr<DesktopEntry> &de : extension_->appIndex_)
-        extension_->searchIndex_.add(de);
-
-    // Unlock the accress
-    extension_->indexAccess_.unlock();
-
-    /*
-     *  ▲ CRITICAL ▲
-     */
+    for (auto &f : extension_->index_)
+        extension_->searchIndex_.add(f);
 
     // Finally update the watches (maybe folders changed)
     if (!extension_->watcher_.directories().isEmpty())
@@ -98,6 +94,6 @@ void Applications::Extension::Indexer::run() {
     }
 
     // Notification
-    qDebug("[%s] Indexing done (%d items)", extension_->name, static_cast<int>(extension_->appIndex_.size()));
-    emit statusInfo(QString("Indexed %1 desktop entries").arg(extension_->appIndex_.size()));
+    qDebug("[%s] Indexing done (%d items)", extension_->name_, static_cast<int>(extension_->index_.size()));
+    emit statusInfo(QString("Indexed %1 desktop entries").arg(extension_->index_.size()));
 }

@@ -17,6 +17,7 @@
 #include <QDebug>
 #include <QFile>
 #include <QTextStream>
+#include <QDataStream>
 #include <QProcess>
 #include <QDirIterator>
 #include <memory>
@@ -30,27 +31,6 @@ using std::map;
 
 QString Applications::DesktopEntry::terminal;
 QStringList Applications::DesktopEntry::supportedGraphicalSudo = {"gksu", "kdesu"};
-
-/** ***************************************************************************/
-QString Applications::DesktopEntry::text() const {
-    return name_;
-}
-
-
-
-/** ***************************************************************************/
-QString Applications::DesktopEntry::subtext() const {
-    return (altName_.isNull()) ? exec_ : altName_;
-}
-
-
-
-/** ***************************************************************************/
-QUrl Applications::DesktopEntry::icon() const {
-    return iconUrl_;
-}
-
-
 
 /** ***************************************************************************/
 void Applications::DesktopEntry::activate() {
@@ -69,21 +49,14 @@ void Applications::DesktopEntry::activate() {
 
 
 /** ***************************************************************************/
-ActionSPtrVec Applications::DesktopEntry::actions() {
-    return actions_;
-}
-
-
-
-/** ***************************************************************************/
 std::vector<QString> Applications::DesktopEntry::aliases() const {
-    return std::vector<QString>({name_, altName_, exec_.section(" ",0,0)});
+    return std::vector<QString>({altName_, exec_.section(" ",0,0)});
 }
 
 
 
 /** ***************************************************************************/
-bool Applications::DesktopEntry::readDesktopEntry() {
+bool Applications::DesktopEntry::parseDesktopEntry() {
     // TYPES http://standards.freedesktop.org/desktop-entry-spec/latest/ar01s05.html
     map<QString,map<QString,QString>> sectionMap;
 
@@ -133,6 +106,10 @@ bool Applications::DesktopEntry::readDesktopEntry() {
     if ((valueIterator = valueMap.find("OnlyShowIn")) != valueMap.end())
         if (!valueIterator->second.split(';',QString::SkipEmptyParts).contains(getenv("XDG_CURRENT_DESKTOP")))
             return false;
+
+    // Check if this is a terminal app
+    if ((valueIterator = valueMap.find("Terminal")) != valueMap.end())
+    term_ = valueIterator->second ==  "true";
 
     // Try to get the (localized name)
     QString locale = QLocale().name();
@@ -251,7 +228,41 @@ bool Applications::DesktopEntry::readDesktopEntry() {
 
 
 /** ***************************************************************************/
-QString Applications::DesktopEntry::escapeString(const QString &unescaped) {
+void Applications::DesktopEntry::serialize(QDataStream &out) {
+    out << path_
+        << static_cast<quint16>(usage_)
+        << name_
+        << altName_ << iconUrl_ << exec_ << term_;
+    out << static_cast<quint64>(actions_.size());
+    for (auto& action : actions_)
+        out << static_cast<DesktopAction*>(action.get())->description_
+            << static_cast<DesktopAction*>(action.get())->exec_
+            << static_cast<DesktopAction*>(action.get())->term_;
+}
+
+
+
+/** ***************************************************************************/
+void Applications::DesktopEntry::deserialize(QDataStream &in) {
+    in >> path_ >> usage_ >> name_ >> altName_ >> iconUrl_ >> exec_ >> term_;
+
+    QString description;
+    QString exec;
+    bool term;
+    quint64 amountOfActions;
+    in >> amountOfActions;
+
+    for (;amountOfActions != 0; --amountOfActions) {
+        in >> description >> exec >> term;
+        actions_.emplace_back(std::make_shared<DesktopAction>(this, description, exec, term));
+    }
+}
+
+
+
+/** ***************************************************************************/
+QString Applications::DesktopEntry::escapeString(const QString &unescaped)
+{
     QString result;
     result.reserve(unescaped.size());
 

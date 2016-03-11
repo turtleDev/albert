@@ -28,8 +28,10 @@ using std::vector;
  * @brief The AbstractItem
  * Displayable base class for all albert items.
  */
-class Action{
+class Action
+{
 public:
+
     virtual ~Action() {}
 
     /** A description */
@@ -38,9 +40,9 @@ public:
     /** Activates the item */
     virtual void activate() = 0;
 };
-
 typedef shared_ptr<Action> ActionSPtr;
 typedef vector<shared_ptr<Action>> ActionSPtrVec;
+
 
 /** ****************************************************************************
  * @brief The A(bstract)A(lbert)Item - A3Item for convenience
@@ -48,8 +50,10 @@ typedef vector<shared_ptr<Action>> ActionSPtrVec;
  * let your items be visible in the proposal list. Subclass this item to your
  * liking and add it to the query if you think it matches the query context.
  */
-class AlbertItem : public Action {
+class AlbertItem : public Action
+{
 public:
+
     /** An enumeration of urgency levels */
     enum class Urgency : unsigned char {
         Low, // Use this if your extension tends to produce much potentially less relevant items (e.g. files)
@@ -61,56 +65,32 @@ public:
     virtual ~AlbertItem() {}
 
     /** The icon for the item */
-    virtual QUrl icon() const = 0;
+    virtual QUrl iconUrl() const = 0;
 
     /** The declarative subtext for the item */
     virtual QString subtext() const = 0;
 
     /** The additional aliases that may match the query */
-    virtual vector<QString> aliases() const = 0;
+    virtual vector<QString> aliases() const { return vector<QString>(); }
 
     /** The usage count used for the ranking in the list */
-    virtual uint16_t usageCount() const = 0;
+    virtual uint16_t usageCount() const { return 0; }
 
-    /** Urgency level of the item */
-    virtual Urgency urgency() const = 0;
+    /** Urgency level of the item, defautls to "Normal" */
+    virtual Urgency urgency() const { return Urgency::Normal; }
 
     /** The alternative actions of the item*/
-    virtual ActionSPtrVec actions() = 0;
+    virtual ActionSPtrVec actions() { return ActionSPtrVec(); }
 
     /** The children of the item */
-    virtual AlbertItem* parent() = 0;
+    virtual AlbertItem* parent() { return nullptr; }
 
     /** The children of the item */
-    virtual vector<shared_ptr<AlbertItem>> children() = 0;
+    virtual vector<shared_ptr<AlbertItem>> children() { return vector<shared_ptr<AlbertItem>>(); }
 
     /** Indicates if the item has children, for performance  */
-    virtual bool hasChildren() const = 0;
+    virtual bool hasChildren() const { return false; }
 };
-
 typedef shared_ptr<AlbertItem> ItemSPtr;
 typedef vector<shared_ptr<AlbertItem>> ItemSPtrVec;
 
-
-
-class AlbertLeaf : public AlbertItem {
-public:
-    virtual ~AlbertLeaf() {}
-    AlbertItem* parent() override { return nullptr; }
-    ItemSPtrVec children() override { return ItemSPtrVec(); }
-    bool hasChildren() const override { return false; }
-};
-
-typedef shared_ptr<AlbertLeaf> LeafSPtr;
-typedef vector<shared_ptr<AlbertLeaf>> LeafSPtrVec;
-
-
-
-class ActionItem : public AlbertLeaf {
-public:
-    virtual ~ActionItem() {}
-    ActionSPtrVec actions() override { return ActionSPtrVec(); }
-};
-
-typedef shared_ptr<AlbertLeaf> LeafSPtr;
-typedef vector<shared_ptr<AlbertLeaf>> LeafSPtrVec;

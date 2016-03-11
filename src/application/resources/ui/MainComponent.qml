@@ -48,7 +48,7 @@ FocusScope {
                 HistoryTextInput {
                     id: historyTextInput
                     clip: true
-                    anchors { left: parent.left; right: parent.right; margins: 4 }
+                    anchors { left: parent.left; right: parent.right; rightMargin: 4; leftMargin: 4; topMargin:2; bottomMargin:2 }
                     font.pixelSize: input_fontsize
                     color: foreground_color
                     selectedTextColor: background_color
@@ -242,30 +242,33 @@ FocusScope {
                             }
                         } // states
 
-
-                        // This function activates the "action" of item
                         function subtextForModifier(){ // TODO
                             return resultsModel.data(resultsModel.index(index, 0), 1000)
                         }
 
                         // This function activates the "action" of item
                         function activate(/*optional*/ action){
-                            action = action || -1; //default if none given
+
+                            // Default if none given
+                            action = (typeof action === 'undefined') ? -1 : action;
+
+                            // Emit a signal to inform other components about the activation
                             listItem.ListView.view.itemActivated()
+
                             /*
-                                For this use the setData funtion is abused, to be able to use the
-                                interface of QAbstractItemModel.
-                                Currently a positive value "action" activates the action 'a' in the set of
-                                actions 'A' returned by actionsRole. If "action" is not in the range of
-                                'A' the default role is activated. Negative values are used for
-                                actions that should depend on the modifiers pressed. This way the backend
-                                extensions can decide which action should be executed for the modifiers.
-                                Currently this mapping is used:
-                                "NoModifier"="-1"
-                                "Alt"="-2"
-                                "Meta"="-3"
-                                "Ctrl"="-4"
-                            */
+                             *  For this use the setData funtion is abused, to be able to use the
+                             *  interface of QAbstractItemModel.
+                             *  Currently a positive value "action" activates the action 'a' in the set of
+                             *  actions 'A' returned by actionsRole. If "action" is not in the range of
+                             *  'A' the default role is activated. Negative values are used for
+                             *  actions that should depend on the modifiers pressed. This way the backend
+                             *  extensions can decide which action should be executed for the modifiers.
+                             *  Currently this mapping is used:
+                             *  "NoModifier"="-1"
+                             *  "Alt"="-2"
+                             *  "Meta"="-3"
+                             *  "Ctrl"="-4"
+                             */
                             resultsModel.setData(resultsModel.index(index, 0), action, activateRole)
                         }
 

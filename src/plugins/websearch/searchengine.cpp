@@ -44,7 +44,7 @@ QString Websearch::SearchEngine::subtext() const {
 
 
 /** ***************************************************************************/
-QUrl Websearch::SearchEngine::icon() const {
+QUrl Websearch::SearchEngine::iconUrl() const {
     return iconUrl_;
 }
 

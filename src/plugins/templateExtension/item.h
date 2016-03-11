@@ -30,7 +30,7 @@ public:
 
     QString text() const override;
     QString subtext() const override;
-    QUrl icon() const override;
+    QUrl iconUrl() const override;
     void activate() override;
     bool hasChildren() const override;
     vector<shared_ptr<AlbertItem>> children() override;

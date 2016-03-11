@@ -22,19 +22,19 @@
 #include <functional>
 #include <vector>
 #include <memory>
-using std::shared_ptr;
 #include <vector>
-using std::vector;
 #include "indexer.h"
 #include "bookmark.h"
 #include "extension.h"
+using std::vector;
+using std::shared_ptr;
 
 
 /** ***************************************************************************/
-void ChromeBookmarks::Indexer::run() {
+void ChromeBookmarks::Extension::Indexer::run() {
 
     // Notification
-    qDebug("[%s] Start indexing in background thread.", extension_->name);
+    qDebug("[%s] Start indexing in background thread.", extension_->name_);
     emit statusInfo("Indexing bookmarks ...");
 
     // Build a new index
@@ -85,10 +85,10 @@ void ChromeBookmarks::Indexer::run() {
     emit statusInfo("Copy usage statistics ... ");
     size_t i=0, j=0;
     while (i < extension_->index_.size() && j < newIndex.size()) {
-        if (extension_->index_[i]->url_ == newIndex[j]->url_) {
-            newIndex[j]->usage_ = extension_->index_[i]->usage_;
+        if (extension_->index_[i]->url() == newIndex[j]->url()) {
+            newIndex[j]->setUsage(extension_->index_[i]->usage());
             ++i;++j;
-        } else if (extension_->index_[i]->url_ < newIndex[j]->url_ ) {
+        } else if (extension_->index_[i]->url() < newIndex[j]->url() ) {
             ++i;
         } else {// if ((*_fileIndex)[i]->path > (*newIndex)[j]->path) {
             ++j;
@@ -100,32 +100,28 @@ void ChromeBookmarks::Indexer::run() {
      */
 
     // Lock the access
-    extension_->indexAccess_.lock();
+    QMutexLocker locker(&extension_->indexAccess_);
 
-    // Set the new index
-    extension_->index_ = std::move(newIndex);
+    // Abortion requested while block
+    if (abort_)
+        return;
 
-    // Reset the offline index
-    emit statusInfo("Build offline index... ");
+    // Set the new index (use swap to shift destruction out of critical area)
+    std::swap(extension_->index_, newIndex);
+
+    // Rebuild the offline index
     extension_->searchIndex_.clear();
-
-    // Build the new offline index
-    for (shared_ptr<AlbertItem> i : extension_->index_)
+    for (auto &i : extension_->index_)
         extension_->searchIndex_.add(i);
 
-    // Unlock the accress
-    extension_->indexAccess_.unlock();
-
     // Finally update the watches (maybe folders changed)
-    extension_->watcher_.removePaths(extension_->watcher_.files());
+    if (!extension_->watcher_.files().isEmpty())
+        extension_->watcher_.removePaths(extension_->watcher_.files());
     if(!extension_->watcher_.addPath(extension_->bookmarksFile_)) // No clue why this should happen
         qCritical() << extension_->bookmarksFile_
                     <<  "could not be watched. Changes in this path will not be noticed.";
-    /*
-     *  ▲ CRITICAL ▲
-     */
 
     // Notification
-    qDebug("[%s] Indexing done (%d items)", extension_->name, static_cast<int>(extension_->index_.size()));
+    qDebug("[%s] Indexing done (%d items)", extension_->name_, static_cast<int>(extension_->index_.size()));
     emit statusInfo(QString("Indexed %1 bookmarks").arg(extension_->index_.size()));
 }

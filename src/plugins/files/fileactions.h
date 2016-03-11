@@ -36,65 +36,44 @@ protected:
 
 
 /** ***************************************************************************/
-class OpenFileAction final : public AbstractFileAction
+class File::OpenFileAction final : public AbstractFileAction
 {
 public:
     OpenFileAction(File *file) : AbstractFileAction(file) {}
 
-    QString text() const override {
-        return "Open file in default application";
-    }
-
-    QUrl icon() const override {
-        return file_->icon();
-    }
-
+    QString text() const override { return "Open file in default application"; }
     void activate() override {
         qApp->hideMainWindow();
         QDesktopServices::openUrl(QUrl::fromLocalFile(file_->path()));
-        file_->incUsage();
+        ++file_->usage_;
     }
 };
 
 
 
 /** ***************************************************************************/
-class RevealFileAction final : public AbstractFileAction
+class File::RevealFileAction final : public AbstractFileAction
 {
 public:
     RevealFileAction(File *file) : AbstractFileAction(file) {}
 
-    QString text() const override {
-        return "Reveal file in default filebrowser";
-    }
-
-    QUrl icon() const override {
-        return QUrl();// FIXME QApplication::style()->standardIcon(QStyle::SP_DirIcon);
-    }
-
+    QString text() const override { return "Reveal file in default filebrowser"; }
     void activate() override {
         qApp->hideMainWindow();
         QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(file_->path()).path()));
-        file_->incUsage();
+        ++file_->usage_;
     }
 };
 
 
 
 /** ***************************************************************************/
-class CopyFileAction final : public AbstractFileAction
+class File::CopyFileAction final : public AbstractFileAction
 {
 public:
     CopyFileAction(File *file) : AbstractFileAction(file) {}
 
-    QString text() const override {
-        return "Copy file to clipboard";
-    }
-
-    QUrl icon() const override {
-        return QUrl(); //  FIXME QIcon::fromTheme("edit-copy");
-    }
-
+    QString text() const override { return "Copy file to clipboard"; }
     void activate() override {
         qApp->hideMainWindow();
 
@@ -122,30 +101,23 @@ public:
         // Set the mimedata
         cb->setMimeData(newMimeData);
 
-        file_->incUsage();
+        ++file_->usage_;
     }
 };
 
 
 
 /** ***************************************************************************/
-class CopyPathAction final : public AbstractFileAction
+class File::CopyPathAction final : public AbstractFileAction
 {
 public:
     CopyPathAction(File *file) : AbstractFileAction(file) {}
 
-    QString text() const override {
-        return "Copy path to clipboard";
-    }
-
-    QUrl icon() const override {
-        return QUrl();// FIXME QIcon::fromTheme("edit-copy");
-    }
-
+    QString text() const override { return "Copy path to clipboard"; }
     void activate() override {
         qApp->hideMainWindow();
         QApplication::clipboard()->setText(file_->path());
-        file_->incUsage();
+        ++file_->usage_;
     }
 };
 

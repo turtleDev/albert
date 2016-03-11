@@ -37,7 +37,7 @@ const bool  Applications::Extension::UPDATE_DELAY = 60000;
 
 /** ***************************************************************************/
 Applications::Extension::Extension() : IExtension("Applications") {
-    qDebug("[%s] Initialize extension", name);
+    qDebug("[%s] Initialize extension", name_);
 
     // Add the userspace icons dir which is not covered in the specs
     QFileInfo userSpaceIconsPath(QDir(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)).filePath("icons"));
@@ -46,7 +46,7 @@ Applications::Extension::Extension() : IExtension("Applications") {
 
     // Load settings
     QSettings s;
-    s.beginGroup(name);
+    s.beginGroup(name_);
     searchIndex_.setFuzzy(s.value(CFG_FUZZY, DEF_FUZZY).toBool());
 
     // Load the paths or set a default
@@ -68,51 +68,56 @@ Applications::Extension::Extension() : IExtension("Applications") {
             DesktopEntry::terminal.append(" -e %1");
     }
 
-
     // Keep the Applications in sync with the OS
     updateDelayTimer_.setInterval(UPDATE_DELAY);
     updateDelayTimer_.setSingleShot(true);
     connect(&watcher_, &QFileSystemWatcher::directoryChanged, &updateDelayTimer_, static_cast<void(QTimer::*)()>(&QTimer::start));
     connect(this, &Extension::rootDirsChanged, &updateDelayTimer_, static_cast<void(QTimer::*)()>(&QTimer::start));
-    connect(&updateDelayTimer_, &QTimer::timeout, this, &Extension::updateIndex);
+    connect(&updateDelayTimer_, &QTimer::timeout, this, &Extension::updateIndex, Qt::QueuedConnection);
 
     // Deserialize data
     QFile dataFile(QDir(QStandardPaths::writableLocation(QStandardPaths::DataLocation))
-                   .filePath(QString("%1.dat").arg(name)));
+                   .filePath(QString("%1.dat").arg(name_)));
     if (dataFile.exists()) {
-        if (dataFile.open(QIODevice::ReadOnly| QIODevice::Text)) {
-            qDebug() << "[Applications] Deserializing from" << dataFile.fileName();
+        if (dataFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
+            qDebug("[%s] Deserializing from %s", name_, dataFile.fileName().toLocal8Bit().data());
             QDataStream in(&dataFile);
-            quint64 size;
-            in >> size;
-            QString path;
-            short usage;
-            for (quint64 i = 0; i < size; ++i) {
-                in >> path >> usage;
-                // index is updated after this
-                appIndex_.push_back(std::make_shared<DesktopEntry>(path, usage));
+            quint64 count;
+            for (in >> count ;count != 0; --count){
+                shared_ptr<DesktopEntry> deshrp = std::make_shared<DesktopEntry>();
+                deshrp->deserialize(in);
+                index_.push_back(deshrp);
             }
             dataFile.close();
+
+            // Build the offline index
+            for (auto &i : index_)
+                searchIndex_.add(i);
         } else
             qWarning() << "Could not open file: " << dataFile.fileName();
-     }
+    }
 
-    // Initial update
+    // Trigger initial update
     updateIndex();
 
-    qDebug("[%s] Extension initialized", name);
+    qDebug("[%s] Extension initialized", name_);
 }
 
 
 
 /** ***************************************************************************/
 Applications::Extension::~Extension() {
-    qDebug("[%s] Finalize extension", name);
+    qDebug("[%s] Finalize extension", name_);
 
-    // Stop and wait for background indexer
+    /*
+     * Stop and wait for background indexer.
+     * This should be thread safe since this thread is responisble to start the
+     * indexer and, connections to this thread are disconnected in the QObject
+     * destructor and all events for a deleted object are removed from the event
+     * queue.
+     */
     if (!indexer_.isNull()) {
         indexer_->abort();
-        disconnect(indexer_.data(), &Indexer::destroyed, this, &Extension::updateIndex);
         QEventLoop loop;
         connect(indexer_.data(), &Indexer::destroyed, &loop, &QEventLoop::quit);
         loop.exec();
@@ -120,7 +125,7 @@ Applications::Extension::~Extension() {
 
     // Save settings
     QSettings s;
-    s.beginGroup(name);
+    s.beginGroup(name_);
     s.setValue(CFG_FUZZY, searchIndex_.fuzzy());
     s.setValue(CFG_PATHS, rootDirs_);
     s.setValue(CFG_TERM, Applications::DesktopEntry::terminal);
@@ -128,25 +133,19 @@ Applications::Extension::~Extension() {
     // Serialize data
     QFile dataFile(
                 QDir(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).
-                filePath(QString("%1.dat").arg(name))
+                filePath(QString("%1.dat").arg(name_))
                 );
     if (dataFile.open(QIODevice::ReadWrite| QIODevice::Text)) {
-        qDebug() << "[Applications] Serializing to" << dataFile.fileName();
+        qDebug("[%s] Serializing to %s", name_, dataFile.fileName().toLocal8Bit().data());
         QDataStream out( &dataFile );
-
-        // Lock index against indexer
-        QMutexLocker locker(&indexAccess_);
-
-        // Serialize
-        out << static_cast<quint64>(appIndex_.size());
-        for (shared_ptr<DesktopEntry> &de : appIndex_)
-            out << de->path() << de->usageCount();
-
+        out << static_cast<quint64>(index_.size());
+        for (shared_ptr<DesktopEntry> &de : index_)
+            de->serialize(out);
         dataFile.close();
     } else
         qCritical() << "Could not write to " << dataFile.fileName();
 
-    qDebug("[%s] Extension finalized", name);
+    qDebug("[%s] Extension finalized", name_);
 }
 
 
@@ -169,7 +168,7 @@ QWidget *Applications::Extension::widget(QWidget *parent) {
         connect(widget_->ui.checkBox_fuzzy, &QCheckBox::toggled, this, &Extension::setFuzzy);
 
         // Info
-        widget_->ui.label_info->setText(QString("%1 Applications indexed.").arg(appIndex_.size()));
+        widget_->ui.label_info->setText(QString("%1 Applications indexed.").arg(index_.size()));
         connect(this, &Extension::statusInfo, widget_->ui.label_info, &QLabel::setText);
 
         // If indexer is active connect its statusInfo to the infoLabel
@@ -290,7 +289,7 @@ void Applications::Extension::updateIndex() {
     if (!indexer_.isNull()) {
         indexer_->abort();
         widget_->ui.label_info->setText("Waiting for indexer to shut down ...");
-        connect(indexer_.data(), &Indexer::destroyed, this, &Extension::updateIndex);
+        connect(indexer_.data(), &Indexer::destroyed, this, &Extension::updateIndex, Qt::QueuedConnection);
     } else {
         // Create a new scanning runnable for the threadpool
         indexer_ = new Indexer(this);

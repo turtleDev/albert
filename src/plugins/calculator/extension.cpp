@@ -29,11 +29,11 @@ const bool    Calculator::Extension::CFG_SEPS_DEF  = false;
 
 /** ***************************************************************************/
 Calculator::Extension::Extension() : IExtension("Calculator") {
-    qDebug("[%s] Initialize extension", name);
+    qDebug("[%s] Initialize extension", name_);
 
     // Load settings
     QSettings s;
-    s.beginGroup(name);
+    s.beginGroup(name_);
     loc_.setNumberOptions(
                 (s.value(CFG_SEPS, CFG_SEPS_DEF).toBool())
                 ? loc_.numberOptions() & ~QLocale::OmitGroupSeparator
@@ -51,23 +51,23 @@ Calculator::Extension::Extension() : IExtension("Calculator") {
     parser_->SetDecSep(loc_.decimalPoint().toLatin1());
     parser_->SetThousandsSep(loc_.groupSeparator().toLatin1());
 
-    qDebug("[%s] Extension initialized", name);
+    qDebug("[%s] Extension initialized", name_);
 }
 
 
 
 /** ***************************************************************************/
 Calculator::Extension::~Extension() {
-    qDebug("[%s] Finalize extension", name);
+    qDebug("[%s] Finalize extension", name_);
 
     parser_.reset();
 
     // Save settings
     QSettings s;
-    s.beginGroup(name);
+    s.beginGroup(name_);
     s.setValue(CFG_SEPS, !loc_.numberOptions().testFlag(QLocale::OmitGroupSeparator));
 
-    qDebug("[%s] Extension finalized", name);
+    qDebug("[%s] Extension finalized", name_);
 }
 
 

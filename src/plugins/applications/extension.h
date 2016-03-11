@@ -40,28 +40,31 @@ class Extension final : public QObject, public IExtension
     class Indexer;
 
 public:
+
     Extension();
     ~Extension();
 
-    // GenericPluginInterface
-    QWidget *widget(QWidget *parent = nullptr) override;
+    /*
+     * Implementation of extension interface
+     */
 
-    // IExtension
+    QWidget *widget(QWidget *parent = nullptr) override;
     void handleQuery(shared_ptr<Query> query) override;
 
-    // API special to this extension
+    /*
+     * Extension specific members
+     */
+
     void addDir(const QString &dirPath);
     void removeDir(const QString &dirPath);
     void restorePaths();
-    void updateIndex();
-
-    // Properties
     bool fuzzy();
     void setFuzzy(bool b = true);
+    void updateIndex();
 
 private:
     QPointer<ConfigWidget> widget_;
-    std::vector<shared_ptr<DesktopEntry>> appIndex_;
+    std::vector<shared_ptr<DesktopEntry>> index_;
     Search searchIndex_;
     QMutex indexAccess_;
     QPointer<Indexer> indexer_;
